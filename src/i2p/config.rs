@@ -6,7 +6,6 @@ use std::convert::From;
 use std::env;
 use std::str::FromStr;
 use std::path::{PathBuf, Path};
-use yaml_rust::yaml::Yaml;
 
 fn get_home_dir_config_path() -> Option<String> {
     match env::home_dir() {

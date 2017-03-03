@@ -6,16 +6,15 @@ pub struct Daemon {
 }
 
 impl Daemon {
-    fn start(&self) -> Option<Error> {
+    pub fn start(&self) -> Option<Error> {
         None
     }
 
-    fn stop(&self) -> Option<Error> {
+    pub fn stop(&self) -> Option<Error> {
         None
     }
 
-    fn run() {
-    }
+    pub fn run(&self) {}
 }
 
 pub fn new() -> Result<Daemon, Error> {
