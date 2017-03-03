@@ -1,0 +1,10 @@
+[package]
+name = "i2pd-rs"
+version = "0.1.0"
+authors = ["Jack Lund <jackl@geekheads.net>"]
+
+[dependencies]
+rust-ini = { git = "https://github.com/jacklund/rust-ini.git" }
+clap = {git = "https://github.com/jacklund/clap-rs.git", features = ["color", "suggestions", "yaml"]}
+vec_map   = "0.7.0"
+yaml-rust = "0.3.5"
