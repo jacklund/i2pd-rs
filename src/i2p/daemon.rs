@@ -40,7 +40,7 @@ impl Daemon {
         }
     }
 
-    fn new() -> Result<Daemon, Error> {
+    pub fn new() -> Result<Daemon, Error> {
         let config: Config = Config::get_config()?;
         let data_dir: PathBuf = Daemon::get_data_dir(&config)?;
         let is_daemon = config.get_bool_value("daemon", false)?;
@@ -52,10 +52,4 @@ impl Daemon {
             is_daemon: is_daemon,
         })
     }
-}
-
-pub fn new() -> Result<Daemon, Error> {
-    let daemon = Daemon::new()?;
-
-    Ok(daemon)
 }

@@ -11,8 +11,10 @@ extern crate yaml_rust;
 
 mod i2p;
 
+use i2p::daemon::Daemon;
+
 fn main() {
-    let daemon: i2p::daemon::Daemon = match i2p::daemon::new() {
+    let daemon: Daemon = match Daemon::new() {
         Err(error) => panic!("Initialization error: {}", error),
         Ok(daemon) => daemon,
     };
