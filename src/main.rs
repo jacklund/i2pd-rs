@@ -3,6 +3,9 @@
 #[macro_use]
 extern crate clap;
 extern crate ini;
+#[macro_use]
+extern crate log;
+extern crate log4rs;
 extern crate vec_map;
 extern crate yaml_rust;
 
