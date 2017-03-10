@@ -1,6 +1,7 @@
 use i2p::config::Config;
 use i2p::error::Error;
 use i2p::logging;
+use std::env;
 use std::fs;
 use std::path::PathBuf;
 
@@ -23,7 +24,20 @@ impl Daemon {
     pub fn run(&self) {}
 
     fn find_data_dir() -> Result<PathBuf, Error> {
-        unimplemented!()
+        let mut data_dir = PathBuf::new();
+        if cfg!(target_os = "macos") {
+            if let Some(home_dir) = env::home_dir() {
+                data_dir.push(home_dir);
+            }
+            data_dir.push("/Library/Application Support/i2pd");
+        } else if cfg!(target_os = "unix") {
+            match env::home_dir() {
+                Some(home_dir) => data_dir.push(home_dir),
+                None => data_dir.push("/tmp"),
+            }
+            data_dir.push("i2pd");
+        }
+        Ok(data_dir)
     }
 
     fn get_data_dir(config: &Config) -> Result<PathBuf, Error> {
