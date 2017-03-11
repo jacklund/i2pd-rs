@@ -1,15 +1,18 @@
 use i2p::config::Config;
 use i2p::error::Error;
 use i2p::logging;
+use i2p::router_context::RouterContext;
+use std::default::Default;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Daemon {
     config: Config,
     data_dir: PathBuf,
     is_daemon: bool,
+    router_context: RouterContext,
 }
 
 impl Daemon {
@@ -40,7 +43,7 @@ impl Daemon {
         Ok(data_dir)
     }
 
-    fn get_data_dir(config: &Config) -> Result<PathBuf, Error> {
+    fn get_data_dir(&self, config: &Config) -> Result<PathBuf, Error> {
         match config.get_value("datadir") {
             Some(dir) => {
                 let mut datadir_path = PathBuf::new();
@@ -54,16 +57,20 @@ impl Daemon {
         }
     }
 
-    pub fn new() -> Result<Daemon, Error> {
-        let config: Config = Config::get_config()?;
-        let data_dir: PathBuf = Daemon::get_data_dir(&config)?;
-        let is_daemon = config.get_bool_value("daemon", false)?;
-        logging::configure(&config, &data_dir)?;
+    fn initialize(&mut self) -> Result<(), Error> {
+        self.config = Config::get_config()?;
+        self.data_dir = self.get_data_dir(&self.config)?;
+        self.is_daemon = self.config.get_bool_value("daemon", false)?;
+        logging::configure(&self.config, &self.data_dir)?;
+        self.router_context = RouterContext::new(&self.config)?;
 
-        Ok(Daemon {
-            config: config,
-            data_dir: data_dir,
-            is_daemon: is_daemon,
-        })
+        Ok(())
+    }
+
+    pub fn new() -> Result<Daemon, Error> {
+        let mut daemon: Daemon = Default::default();
+        daemon.initialize()?;
+
+        Ok(daemon)
     }
 }

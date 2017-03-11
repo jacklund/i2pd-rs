@@ -107,14 +107,28 @@ impl Config {
     }
 
     pub fn get_bool_value(&self, name: &str, default: bool) -> Result<bool, Error> {
-        match self.map.get(name) {
+        match self.get_value(name) {
             Some(value) => Ok(bool::from_str(value)?),
+            None => Ok(default),
+        }
+    }
+
+    pub fn get_int_value(&self, name: &str, default: u32) -> Result<u32, Error> {
+        match self.get_value(name) {
+            Some(value) => Ok(value.parse::<u32>()?),
             None => Ok(default),
         }
     }
 
     pub fn get_value(&self, name: &str) -> Option<&String> {
         self.map.get(name)
+    }
+
+    pub fn get_value_with_default(&self, name: &str, default: &str) -> String {
+        match self.get_value(name) {
+            Some(value) => value.to_string(),
+            None => default.to_string(),
+        }
     }
 
     pub fn get_as_path(&self, name: &str) -> Option<PathBuf> {
