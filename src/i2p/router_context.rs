@@ -1,5 +1,6 @@
 use i2p::config::Config;
 use i2p::crypto;
+use i2p::data::router_info::RouterInfo;
 use i2p::error::Error;
 use std::default::Default;
 
@@ -16,6 +17,7 @@ pub struct RouterContext {
     flood_fill: bool,
     bandwidth_limit: u32,
     bandwidth_type: Option<BandwidthType>,
+    router_info: RouterInfo,
 }
 
 #[derive(Debug)]
@@ -49,6 +51,16 @@ impl RouterContext {
         self.set_max_num_transit_tunnels(config.get_int_value("limits.transittunnels", 2500)?)?;
         self.set_flood_fill(config.get_bool_value("floodfill", false)?)?;
         self.set_bandwidth(config.get_value("bandwidth").map(|s| s.as_str()))?;
+        self.set_family(config.get_value("family").map(|s| s.as_str()))?;
+
+        Ok(())
+    }
+
+    fn set_family(&mut self, family: Option<&str>) -> Result<(), Error> {
+        if let Some(_) = family {
+            // Create family signature and set the family and signature in router info
+            unimplemented!()
+        }
 
         Ok(())
     }

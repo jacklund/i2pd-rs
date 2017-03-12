@@ -1,4 +1,6 @@
 #![feature(box_syntax)]
+#![feature(plugin, custom_derive)]
+#![plugin(mockers_macros)]
 
 #[macro_use]
 extern crate clap;
@@ -6,6 +8,8 @@ extern crate ini;
 #[macro_use]
 extern crate log;
 extern crate log4rs;
+#[cfg(test)]
+extern crate mockers;
 extern crate vec_map;
 extern crate yaml_rust;
 
@@ -19,10 +23,11 @@ fn main() {
         Ok(daemon) => daemon,
     };
 
-    if let Some(error) = daemon.start() {
-        daemon.stop();
-        println!("{:?}", error);
-    } else {
-        daemon.run();
+    match daemon.start() {
+        Ok(_) => daemon.run(),
+        Err(error) => {
+            daemon.stop();
+            error!("Error in daemon: {}", error);
+        }
     }
 }

@@ -1,7 +1,10 @@
 use i2p::config::Config;
+use i2p::data::netdb::NetDB;
 use i2p::error::Error;
+use i2p::http::http_server::HTTPServer;
 use i2p::logging;
 use i2p::router_context::RouterContext;
+use i2p::transport::transports::Transports;
 use std::default::Default;
 use std::env;
 use std::fs;
@@ -13,15 +16,49 @@ pub struct Daemon {
     data_dir: PathBuf,
     is_daemon: bool,
     router_context: RouterContext,
+    netdb: NetDB,
+    transports: Transports,
+    http_server: Option<HTTPServer>,
 }
 
 impl Daemon {
-    pub fn start(&self) -> Option<Error> {
-        None
+    pub fn start(&self) -> Result<(), Error> {
+        info!("Daemon: Starting NetDB");
+        if let Err(error) = self.netdb.start() {
+            error!("Error starting NetDB: {}", error);
+            self.netdb.stop();
+        }
+
+        let use_ntcp = self.config.get_bool_value("ntcp", true)?;
+        let use_ssu = self.config.get_bool_value("ssu", true)?;
+
+        info!("Daemon: starting Transports");
+        if !use_ssu {
+            info!("Daemon: ssu disabled");
+        }
+        if !use_ntcp {
+            info!("Daemon: ntcp disabled");
+        }
+
+        self.transports.start(use_ntcp, use_ssu)?;
+        if self.transports.is_running() {
+            info!("Daemon: Transports started");
+        } else {
+            error!("Daemon: Failed to start transports");
+            self.stop();
+            return Err(Error::Transport("Transports failed to start".to_string()));
+        }
+
+        if let Some(ref server) = self.http_server {
+            server.start();
+        }
+
+        Ok(())
     }
 
-    pub fn stop(&self) -> Option<Error> {
-        None
+    pub fn stop(&self) {
+        self.transports.stop();
+        self.netdb.stop();
     }
 
     pub fn run(&self) {}
@@ -63,6 +100,16 @@ impl Daemon {
         self.is_daemon = self.config.get_bool_value("daemon", false)?;
         logging::configure(&self.config, &self.data_dir)?;
         self.router_context = RouterContext::new(&self.config)?;
+        self.netdb = NetDB::new()?;
+        self.transports = Transports::new();
+
+        let http = self.config.get_bool_value("http.enabled", true)?;
+        if http {
+            let http_address = self.config.get_value_with_default("http.address", "127.0.0.1");
+            let http_port = self.config.get_int_value("http.port", 7070)?;
+            info!("Daemon starting HTTP server at {}:{}", http_address, http_port);
+            self.http_server = Some(HTTPServer::new(&http_address, http_port)?);
+        }
 
         Ok(())
     }

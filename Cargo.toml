@@ -7,6 +7,10 @@ authors = ["Jack Lund <jackl@geekheads.net>"]
 clap = "2.20.5"
 log = "0.3.6"
 log4rs = "0.6.2"
+mockers_macros = "0.5.7"
 rust-ini = { git = "https://github.com/jacklund/rust-ini.git" }
 vec_map   = "0.7.0"
 yaml-rust = "0.3.5"
+
+[dev-dependencies]
+mockers = "0.5.7"
