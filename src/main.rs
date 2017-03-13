@@ -11,6 +11,7 @@ extern crate log4rs;
 #[cfg(test)]
 extern crate mockers;
 extern crate vec_map;
+extern crate walkdir;
 extern crate yaml_rust;
 
 mod i2p;

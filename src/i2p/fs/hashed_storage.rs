@@ -1,8 +1,9 @@
 use i2p::error::Error;
 use std::collections::HashMap;
 use std::fs;
-use std::io::Write;
-use std::path::PathBuf;
+use std::io::{self, Read, Write};
+use std::path::{Path, PathBuf};
+use walkdir::{WalkDir, WalkDirIterator};
 
 #[derive(Debug, Default)]
 pub struct HashedStorage {
@@ -11,21 +12,34 @@ pub struct HashedStorage {
 }
 
 impl HashedStorage {
-    pub fn new(data_dir: &PathBuf, app: &str, kind: &str, hash_keys: bool) -> Result<HashedStorage, Error> {
+    pub fn new(data_dir: &PathBuf,
+               app: &str,
+               kind: &str,
+               hash_keys: bool)
+               -> Result<HashedStorage, Error> {
         let mut hashed_storage: HashedStorage = Default::default();
         hashed_storage.initialize(data_dir, app, kind, hash_keys);
 
         Ok(hashed_storage)
     }
 
-    fn initialize(&mut self, data_dir: &PathBuf, app: &str, kind: &str, hash_keys: bool) -> Result<(), Error> {
+    fn initialize(&mut self,
+                  data_dir: &PathBuf,
+                  app: &str,
+                  kind: &str,
+                  hash_keys: bool)
+                  -> Result<(), Error> {
         self.directory = self.create_storage_directory(data_dir, app, kind)?;
         self.hash_keys = hash_keys;
 
         Ok(())
     }
 
-    fn create_storage_directory(&self, data_dir: &PathBuf, app: &str, kind: &str) -> Result<PathBuf, Error> {
+    fn create_storage_directory(&self,
+                                data_dir: &PathBuf,
+                                app: &str,
+                                kind: &str)
+                                -> Result<PathBuf, Error> {
         let mut dir = PathBuf::new();
         dir.push(data_dir);
         dir.push(app);
@@ -33,7 +47,8 @@ impl HashedStorage {
         if !dir.exists() {
             fs::create_dir_all(dir.to_owned());
         } else if !dir.is_dir() {
-            return Err(Error::Configuration(format!("Path {} exists but is not a directory", dir.to_str().unwrap())));
+            return Err(Error::Configuration(format!("Path {} exists but is not a directory",
+                                                    dir.to_str().unwrap())));
         }
 
         Ok(dir)
@@ -64,8 +79,30 @@ impl HashedStorage {
         Ok(())
     }
 
+    fn read(&self, path: &Path) -> Result<Vec<u8>, Error> {
+        let mut buffer: Vec<u8> = Vec::new();
+        fs::File::open(path)?.read_to_end(&mut buffer)?;
+
+        Ok(buffer)
+    }
+
     pub fn load(&self) -> Result<HashMap<String, Vec<u8>>, Error> {
-        unimplemented!()
+        let mut map: HashMap<String, Vec<u8>> = HashMap::new();
+        for entry in WalkDir::new(self.directory.to_owned())
+            .into_iter()
+            .filter_entry(|e| e.path().is_file()) {
+            match entry {
+                Ok(file) => {
+                    map.insert(file.file_name().to_str().unwrap().to_string(),
+                               self.read(file.path())?);
+                }
+                Err(error) => {
+                    return Err(Error::from(io::Error::from(error)));
+                }
+            }
+        }
+
+        Ok(map)
     }
 
     pub fn remove(&self, key: &str) {

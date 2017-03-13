@@ -22,7 +22,7 @@ pub fn configure(config: &Config, data_dir: &PathBuf) -> Result<(), Error> {
             } else if Path::new("log4rs.yml").is_file() {
                 Ok(log4rs::init_file("log4rs.yml", Default::default())?)
             } else {
-                Err(Error::Configuration(format!("No logging configuration file provided")))
+                Err(Error::Configuration("No logging configuration file provided".to_string()))
             }
         }
     }

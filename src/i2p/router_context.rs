@@ -57,7 +57,7 @@ impl RouterContext {
     }
 
     fn set_family(&mut self, family: Option<&str>) -> Result<(), Error> {
-        if let Some(_) = family {
+        if family.is_some() {
             // Create family signature and set the family and signature in router info
             unimplemented!()
         }
