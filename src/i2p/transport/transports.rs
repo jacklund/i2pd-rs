@@ -15,6 +15,14 @@ impl Transports {
     }
 
     pub fn start(&self, use_ntcp: bool, use_ssu: bool) -> Result<(), Error> {
+        if !use_ssu {
+            info!("Transports: ssu disabled");
+        }
+
+        if !use_ntcp {
+            info!("Transports: ntcp disabled");
+        }
+
         unimplemented!()
     }
 

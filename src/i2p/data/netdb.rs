@@ -1,12 +1,27 @@
+use i2p::config::Config;
 use i2p::error::Error;
+use i2p::fs::hashed_storage::HashedStorage;
+use std::path::PathBuf;
+
+#[derive(Debug)]
+enum DBStorage {
+    Hashed(HashedStorage),
+}
+
+impl Default for DBStorage {
+    fn default() -> DBStorage { DBStorage::Hashed(Default::default()) }
+}
 
 #[derive(Debug, Default)]
 pub struct NetDB {
+    storage: DBStorage,
 }
 
 impl NetDB {
-    pub fn new() -> Result<NetDB, Error> {
-        let netdb: NetDB = Default::default();
+    pub fn new(config: &Config, data_dir: &PathBuf) -> Result<NetDB, Error> {
+        let netdb: NetDB = NetDB {
+            storage: DBStorage::Hashed(HashedStorage::new(data_dir, "i2pd-rs", "routerinfo", false)?),
+        };
 
         Ok(netdb)
     }

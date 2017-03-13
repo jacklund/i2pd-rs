@@ -33,13 +33,6 @@ impl Daemon {
         let use_ssu = self.config.get_bool_value("ssu", true)?;
 
         info!("Daemon: starting Transports");
-        if !use_ssu {
-            info!("Daemon: ssu disabled");
-        }
-        if !use_ntcp {
-            info!("Daemon: ntcp disabled");
-        }
-
         self.transports.start(use_ntcp, use_ssu)?;
         if self.transports.is_running() {
             info!("Daemon: Transports started");
@@ -57,6 +50,9 @@ impl Daemon {
     }
 
     pub fn stop(&self) {
+        if let Some(ref server) = self.http_server {
+            server.stop();
+        }
         self.transports.stop();
         self.netdb.stop();
     }
@@ -100,7 +96,7 @@ impl Daemon {
         self.is_daemon = self.config.get_bool_value("daemon", false)?;
         logging::configure(&self.config, &self.data_dir)?;
         self.router_context = RouterContext::new(&self.config)?;
-        self.netdb = NetDB::new()?;
+        self.netdb = NetDB::new(&self.config, &self.data_dir)?;
         self.transports = Transports::new();
 
         let http = self.config.get_bool_value("http.enabled", true)?;
