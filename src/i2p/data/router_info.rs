@@ -1,5 +1,21 @@
-#[derive(Debug, Default)]
+use i2p::data::crypto;
+use std::collections::HashMap;
+use time::Timespec;
+
+pub struct RouterAddress {
+    cost: u8,
+    expiration: Option<Timespec>,
+    transport_style: SupportedTransports,
+    options: HashMap<String, String>,
+}
+
+#[derive(Debug, RustcEncodable, RustcDecodable)]
 pub struct RouterInfo {
+    identity: crypto::RouterIdentity,
+    published: Timespec,
+    addresses: Vec<RouterAddress>,
+    options: HashMap<String, String>,
+    signature: crypto::Signature,
 }
 
 pub enum SupportedTransports {
