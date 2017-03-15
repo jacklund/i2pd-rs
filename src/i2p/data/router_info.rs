@@ -1,28 +1,36 @@
 use i2p::data::crypto;
+use rustc_serialize::{Decodable, Decoder, DecoderHelpers, Encodable, Encoder};
 use std::collections::HashMap;
-use time::Timespec;
 
+#[derive(Debug, Default, RustcEncodable, RustcDecodable)]
 pub struct RouterAddress {
     cost: u8,
-    expiration: Option<Timespec>,
+    expiration: Option<u64>,
     transport_style: SupportedTransports,
     options: HashMap<String, String>,
 }
 
-#[derive(Debug, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Default, RustcEncodable, RustcDecodable)]
 pub struct RouterInfo {
     identity: crypto::RouterIdentity,
-    published: Timespec,
+    published: u64,
     addresses: Vec<RouterAddress>,
     options: HashMap<String, String>,
     signature: crypto::Signature,
 }
 
+#[derive(Debug, RustcEncodable, RustcDecodable)]
 pub enum SupportedTransports {
     NTCPV4,
     NTCPV6,
     SSUV4,
     SSUV6,
+}
+
+impl Default for SupportedTransports {
+    fn default() -> SupportedTransports {
+        SupportedTransports::NTCPV4
+    }
 }
 
 enum Caps {
