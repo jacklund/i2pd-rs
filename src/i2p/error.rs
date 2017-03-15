@@ -20,26 +20,26 @@ pub enum Error {
     Deserialization(DecodingError),
 }
 
-impl From<ini::Error> for Error  {
-    fn from(error: ini::Error) -> Error  {
+impl From<ini::Error> for Error {
+    fn from(error: ini::Error) -> Error {
         Error::ConfigFile(error)
     }
 }
 
-impl From<io::Error> for Error  {
-    fn from(error: io::Error) -> Error  {
+impl From<io::Error> for Error {
+    fn from(error: io::Error) -> Error {
         Error::IO(error)
     }
 }
 
-impl From<str::ParseBoolError> for Error  {
-    fn from(error: str::ParseBoolError) -> Error  {
+impl From<str::ParseBoolError> for Error {
+    fn from(error: str::ParseBoolError) -> Error {
         Error::ParseConfig(error)
     }
 }
 
-impl From<log4rs::Error> for Error  {
-    fn from(error: log4rs::Error) -> Error  {
+impl From<log4rs::Error> for Error {
+    fn from(error: log4rs::Error) -> Error {
         Error::LogConfig(error)
     }
 }
@@ -99,7 +99,8 @@ impl error::Error for Error {
             Error::ParseConfig(ref e) => e.cause(),
             Error::ParseIntConfig(ref e) => e.cause(),
             Error::LogConfig(ref e) => e.cause(),
-            Error::Configuration(_) | Error::Transport(_) => None,
+            Error::Configuration(_) |
+            Error::Transport(_) => None,
             Error::Serialization(ref e) => e.cause(),
             Error::Deserialization(ref e) => e.cause(),
             Error::IO(ref e) => e.cause(),

@@ -103,7 +103,9 @@ impl Daemon {
         if http {
             let http_address = self.config.get_value_with_default("http.address", "127.0.0.1");
             let http_port = self.config.get_int_value("http.port", 7070)?;
-            info!("Daemon starting HTTP server at {}:{}", http_address, http_port);
+            info!("Daemon starting HTTP server at {}:{}",
+                  http_address,
+                  http_port);
             self.http_server = Some(HTTPServer::new(&http_address, http_port)?);
         }
 

@@ -67,61 +67,63 @@ impl RouterContext {
 
     fn set_bandwidth(&mut self, bandwidth: Option<&str>) -> Result<(), Error> {
         match bandwidth {
-            Some(bandwidth) => match bandwidth {
-                "K" => {
-                    self.bandwidth_limit = 12;
-                    self.bandwidth_type = Some(BandwidthType::Low);
-                },
-                "L" => {
-                    self.bandwidth_limit = 48;
-                    self.bandwidth_type = Some(BandwidthType::Low);
-                },
-                "M" => {
-                    self.bandwidth_limit = 64;
-                    self.bandwidth_type = Some(BandwidthType::High);
-                },
-                "N" => {
-                    self.bandwidth_limit = 128;
-                    self.bandwidth_type = Some(BandwidthType::High);
-                },
-                "O" => {
-                    self.bandwidth_limit = 256;
-                    self.bandwidth_type = Some(BandwidthType::High);
-                },
-                "P" => {
-                    self.bandwidth_limit = 2048;
-                    self.bandwidth_type = Some(BandwidthType::Extra);
-                },
-                "X" => {
-                    self.bandwidth_limit = 9999;
-                    self.bandwidth_type = Some(BandwidthType::Unlimited);
-                },
-                _ => {
-                    let value = bandwidth.parse::<u32>()?;
-                    if value > 2000 {
-                        self.set_bandwidth(Some("X"))?;
-                    } else if value > 256 {
-                        self.set_bandwidth(Some("P"))?;
-                    } else if value > 128 {
-                        self.set_bandwidth(Some("O"))?;
-                    } else if value > 64 {
-                        self.set_bandwidth(Some("N"))?;
-                    } else if value > 48 {
-                        self.set_bandwidth(Some("M"))?;
-                    } else if value > 12 {
-                        self.set_bandwidth(Some("L"))?;
-                    } else {
-                        self.set_bandwidth(Some("K"))?;
+            Some(bandwidth) => {
+                match bandwidth {
+                    "K" => {
+                        self.bandwidth_limit = 12;
+                        self.bandwidth_type = Some(BandwidthType::Low);
+                    }
+                    "L" => {
+                        self.bandwidth_limit = 48;
+                        self.bandwidth_type = Some(BandwidthType::Low);
+                    }
+                    "M" => {
+                        self.bandwidth_limit = 64;
+                        self.bandwidth_type = Some(BandwidthType::High);
+                    }
+                    "N" => {
+                        self.bandwidth_limit = 128;
+                        self.bandwidth_type = Some(BandwidthType::High);
+                    }
+                    "O" => {
+                        self.bandwidth_limit = 256;
+                        self.bandwidth_type = Some(BandwidthType::High);
+                    }
+                    "P" => {
+                        self.bandwidth_limit = 2048;
+                        self.bandwidth_type = Some(BandwidthType::Extra);
+                    }
+                    "X" => {
+                        self.bandwidth_limit = 9999;
+                        self.bandwidth_type = Some(BandwidthType::Unlimited);
+                    }
+                    _ => {
+                        let value = bandwidth.parse::<u32>()?;
+                        if value > 2000 {
+                            self.set_bandwidth(Some("X"))?;
+                        } else if value > 256 {
+                            self.set_bandwidth(Some("P"))?;
+                        } else if value > 128 {
+                            self.set_bandwidth(Some("O"))?;
+                        } else if value > 64 {
+                            self.set_bandwidth(Some("N"))?;
+                        } else if value > 48 {
+                            self.set_bandwidth(Some("M"))?;
+                        } else if value > 12 {
+                            self.set_bandwidth(Some("L"))?;
+                        } else {
+                            self.set_bandwidth(Some("K"))?;
+                        }
                     }
                 }
-            },
+            }
             None => {
                 if self.flood_fill {
                     self.set_bandwidth(Some("P"))?;
                 } else {
                     self.set_bandwidth(Some("L"))?;
                 }
-            },
+            }
         };
 
         Ok(())

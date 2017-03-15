@@ -93,7 +93,7 @@ impl HashedStorage {
     }
 }
 
-impl <T: Decodable + Encodable> Storage<T> for HashedStorage {
+impl<T: Decodable + Encodable> Storage<T> for HashedStorage {
     fn store(&self, key: &str, value: &T) -> Result<(), Error> {
         let mut file: fs::File = self.create_file(&self.get_filename(key)?)?;
         file.write_all(encode(value, SizeLimit::Infinite)?.as_slice())?;
@@ -109,9 +109,9 @@ impl <T: Decodable + Encodable> Storage<T> for HashedStorage {
                 Ok(entry) => {
                     if entry.path().is_file() {
                         map.insert(entry.file_name().to_str().unwrap().to_string(),
-                                decode(&self.read(entry.path())?[..])?);
+                                   decode(&self.read(entry.path())?[..])?);
                     }
-                },
+                }
                 Err(error) => return Err(Error::from(io::Error::from(error))),
             }
         }
@@ -131,7 +131,8 @@ mod test {
     #[test]
     fn test_store_and_load() {
         let data_dir = TempDir::new("i2pd-test").unwrap();
-        let mut hashed_storage = HashedStorage::new(data_dir.path(), "test", "router-info", false).unwrap();
+        let mut hashed_storage = HashedStorage::new(data_dir.path(), "test", "router-info", false)
+            .unwrap();
         let mut address: RouterAddress = Default::default();
         address.cost = 100;
         address.expiration = None;
