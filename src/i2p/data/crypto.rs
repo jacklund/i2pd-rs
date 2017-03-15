@@ -16,7 +16,11 @@ macro_rules! generate_crypto {
             impl Debug for $t {
                 fn fmt(&self, f: &mut Formatter) -> fmt::Result {
                     match *self {
-                        $($t::$name(data) => data.to_vec().fmt(f)),+
+                        $(
+                            $t::$name(data) => {
+                                write!(f, "{}::{}({:?})", stringify!($t), stringify!($name), data.to_vec())
+                            }
+                          ),+
                     }
                 }
             }
