@@ -12,6 +12,7 @@ extern crate log4rs;
 #[cfg(test)]
 extern crate mockers;
 extern crate rustc_serialize;
+#[cfg(test)]
 extern crate tempdir;
 extern crate time;
 extern crate vec_map;
