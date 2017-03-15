@@ -10,14 +10,14 @@ macro_rules! generate_crypto {
         }
     ) => (
             pub enum $t {
-                $($name([u8; $x])),+
+                $($name(Box<[u8; $x]>)),+
             }
 
             impl Debug for $t {
                 fn fmt(&self, f: &mut Formatter) -> fmt::Result {
                     match *self {
                         $(
-                            $t::$name(data) => {
+                            $t::$name(ref data) => {
                                 write!(f, "{}::{}({:?})", stringify!($t), stringify!($name), data.to_vec())
                             }
                           ),+
@@ -28,7 +28,7 @@ macro_rules! generate_crypto {
             impl Encodable for $t {
                 fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
                     match *self {
-                        $( $t::$name(data) => {
+                        $( $t::$name(ref data) => {
                             let id: u8 = $idx;
                             id.encode(s)?;
                             data.to_vec().encode(s)
@@ -51,11 +51,11 @@ macro_rules! generate_crypto {
                                 for i in 0..$x {
                                     a[i] = v[i];
                                 }
-                                return Ok($t::$name(a));
+                                Ok($t::$name(box a))
                             }
                         ),+
 
-                        _ => return Err(d.error("Unknown id")),
+                        _ => Err(d.error("Unknown id")),
                     }
                 }
             }
@@ -70,7 +70,7 @@ generate_crypto!{
 
 impl Default for PublicKey {
     fn default() -> PublicKey {
-        PublicKey::ElGamal([0; 256])
+        PublicKey::ElGamal(box [0; 256])
     }
 }
 
@@ -102,7 +102,7 @@ generate_crypto!{
 
 impl Default for SigningPublicKey {
     fn default() -> SigningPublicKey {
-        SigningPublicKey::DSA_SHA1([0; 128])
+        SigningPublicKey::DSA_SHA1(box [0; 128])
     }
 }
 
@@ -136,7 +136,7 @@ generate_crypto! {
 
 impl Default for Signature {
     fn default() -> Signature {
-        Signature::DSA_SHA1([0; 40])
+        Signature::DSA_SHA1(box [0; 40])
     }
 }
 

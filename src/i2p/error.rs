@@ -99,10 +99,9 @@ impl error::Error for Error {
             Error::ParseConfig(ref e) => e.cause(),
             Error::ParseIntConfig(ref e) => e.cause(),
             Error::LogConfig(ref e) => e.cause(),
-            Error::Configuration(_) => None,
+            Error::Configuration(_) | Error::Transport(_) => None,
             Error::Serialization(ref e) => e.cause(),
             Error::Deserialization(ref e) => e.cause(),
-            Error::Transport(_) => None,
             Error::IO(ref e) => e.cause(),
         }
     }

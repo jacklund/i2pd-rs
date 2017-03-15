@@ -1,5 +1,4 @@
 use i2p::config::Config;
-use i2p::data::router_info::RouterInfo;
 use i2p::error::Error;
 use i2p::fs::hashed_storage::HashedStorage;
 use std::path::PathBuf;

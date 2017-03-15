@@ -44,7 +44,7 @@ enum Caps {
 }
 
 enum TransportStyle {
-    TransportUnknown = 0,
-    TransportNTCP,
-    TransportSSU,
+    Unknown = 0,
+    NTCP,
+    SSU,
 }

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
-use walkdir::{WalkDir, WalkDirIterator};
+use walkdir::WalkDir;
 
 #[derive(Debug, Default)]
 pub struct HashedStorage {
