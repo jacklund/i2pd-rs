@@ -1,13 +1,12 @@
 use i2p::data::crypto;
-use rustc_serialize::{Decodable, Decoder, DecoderHelpers, Encodable, Encoder};
 use std::collections::HashMap;
 
-#[derive(Debug, Default, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Default, PartialEq, RustcEncodable, RustcDecodable)]
 pub struct RouterAddress {
-    cost: u8,
-    expiration: Option<u64>,
-    transport_style: SupportedTransports,
-    options: HashMap<String, String>,
+    pub cost: u8,
+    pub expiration: Option<u64>,
+    pub transport_style: SupportedTransports,
+    pub options: HashMap<String, String>,
 }
 
 #[derive(Debug, Default, RustcEncodable, RustcDecodable)]
@@ -19,7 +18,7 @@ pub struct RouterInfo {
     signature: crypto::Signature,
 }
 
-#[derive(Debug, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 pub enum SupportedTransports {
     NTCPV4,
     NTCPV6,

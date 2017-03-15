@@ -1,3 +1,4 @@
+use bincode::rustc_serialize::{DecodingError, EncodingError};
 use ini::ini;
 use log4rs;
 use std::error;
@@ -15,6 +16,8 @@ pub enum Error {
     Configuration(String),
     LogConfig(log4rs::Error),
     Transport(String),
+    Serialization(EncodingError),
+    Deserialization(DecodingError),
 }
 
 impl From<ini::Error> for Error  {
@@ -47,6 +50,18 @@ impl From<num::ParseIntError> for Error {
     }
 }
 
+impl From<EncodingError> for Error {
+    fn from(error: EncodingError) -> Error {
+        Error::Serialization(error)
+    }
+}
+
+impl From<DecodingError> for Error {
+    fn from(error: DecodingError) -> Error {
+        Error::Deserialization(error)
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -55,6 +70,8 @@ impl fmt::Display for Error {
             Error::ParseIntConfig(ref err) => write!(f, "Configuration error: {}", err),
             Error::Configuration(ref err) => write!(f, "Configuration error: {}", err),
             Error::LogConfig(ref err) => write!(f, "Configuration error: {}", err),
+            Error::Serialization(ref err) => write!(f, "Serialization error: {}", err),
+            Error::Deserialization(ref err) => write!(f, "Deserialization error: {}", err),
             Error::Transport(ref err) => write!(f, "Transport error: {}", err),
             Error::IO(ref err) => write!(f, "I/O error: {}", err),
         }
@@ -69,6 +86,8 @@ impl error::Error for Error {
             Error::ParseIntConfig(ref err) => err.description(),
             Error::LogConfig(ref err) => err.description(),
             Error::Configuration(ref err) => err.as_str(),
+            Error::Serialization(ref err) => err.description(),
+            Error::Deserialization(ref err) => err.description(),
             Error::Transport(ref err) => err,
             Error::IO(ref err) => err.description(),
         }
@@ -81,6 +100,8 @@ impl error::Error for Error {
             Error::ParseIntConfig(ref e) => e.cause(),
             Error::LogConfig(ref e) => e.cause(),
             Error::Configuration(_) => None,
+            Error::Serialization(ref e) => e.cause(),
+            Error::Deserialization(ref e) => e.cause(),
             Error::Transport(_) => None,
             Error::IO(ref e) => e.cause(),
         }
