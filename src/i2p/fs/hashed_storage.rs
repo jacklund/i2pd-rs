@@ -14,6 +14,11 @@ pub struct HashedStorage {
     hash_keys: bool,
 }
 
+trait Storage<T: Decodable + Encodable> {
+    fn store(&self, key: &str, value: &T) -> Result<(), Error>;
+    fn load(&self) -> Result<HashMap<String, T>, Error>;
+}
+
 impl HashedStorage {
     pub fn new(data_dir: &Path,
                app: &str,
@@ -76,14 +81,6 @@ impl HashedStorage {
         Ok(fs::File::create(file_path)?)
     }
 
-    pub fn store<T: Encodable>(&self, key: &str, value: &T) -> Result<(), Error> {
-        let mut file: fs::File = self.create_file(&self.get_filename(key)?)?;
-        file.write_all(encode(value, SizeLimit::Infinite)?.as_slice())?;
-        file.sync_all()?;
-
-        Ok(())
-    }
-
     fn read(&self, path: &Path) -> Result<Vec<u8>, Error> {
         let mut buffer: Vec<u8> = Vec::new();
         fs::File::open(path)?.read_to_end(&mut buffer)?;
@@ -91,7 +88,21 @@ impl HashedStorage {
         Ok(buffer)
     }
 
-    pub fn load<T: Decodable>(&self) -> Result<HashMap<String, T>, Error> {
+    pub fn remove(&self, key: &str) {
+        unimplemented!()
+    }
+}
+
+impl <T: Decodable + Encodable> Storage<T> for HashedStorage {
+    fn store(&self, key: &str, value: &T) -> Result<(), Error> {
+        let mut file: fs::File = self.create_file(&self.get_filename(key)?)?;
+        file.write_all(encode(value, SizeLimit::Infinite)?.as_slice())?;
+        file.sync_all()?;
+
+        Ok(())
+    }
+
+    fn load(&self) -> Result<HashMap<String, T>, Error> {
         let mut map: HashMap<String, T> = HashMap::new();
         for result in WalkDir::new(self.directory.to_owned()) {
             match result {
@@ -107,19 +118,15 @@ impl HashedStorage {
 
         Ok(map)
     }
-
-    pub fn remove(&self, key: &str) {
-        unimplemented!()
-    }
 }
 
 #[cfg(test)]
 mod test {
+    use i2p::data::router_info::{RouterAddress, SupportedTransports};
+    use i2p::fs::hashed_storage::{HashedStorage, Storage};
     use std::collections::HashMap;
     use std::env;
-    use super::super::super::data::router_info::{RouterAddress, SupportedTransports};
     use tempdir::TempDir;
-    use super::HashedStorage;
 
     #[test]
     fn test_store_and_load() {
