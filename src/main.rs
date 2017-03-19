@@ -2,7 +2,7 @@
 #![feature(plugin, custom_derive)]
 #![plugin(mockers_macros)]
 
-extern crate bincode;
+extern crate byteorder;
 #[macro_use]
 extern crate clap;
 extern crate ini;
@@ -11,7 +11,9 @@ extern crate log;
 extern crate log4rs;
 #[cfg(test)]
 extern crate mockers;
-extern crate rustc_serialize;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 #[cfg(test)]
 extern crate tempdir;
 extern crate time;

@@ -1,7 +1,8 @@
 use i2p::data::crypto;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Default, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct RouterAddress {
     pub cost: u8,
     pub expiration: Option<u64>,
@@ -9,7 +10,7 @@ pub struct RouterAddress {
     pub options: HashMap<String, String>,
 }
 
-#[derive(Debug, Default, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct RouterInfo {
     identity: crypto::RouterIdentity,
     published: u64,
@@ -18,7 +19,7 @@ pub struct RouterInfo {
     signature: crypto::Signature,
 }
 
-#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub enum SupportedTransports {
     NTCPV4,
     NTCPV6,

@@ -1,7 +1,4 @@
-use bincode::rustc_serialize::{decode, encode};
-use bincode::SizeLimit;
 use i2p::error::Error;
-use rustc_serialize::{Decodable, Encodable};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{self, Read, Write};
@@ -14,7 +11,7 @@ pub struct HashedStorage {
     hash_keys: bool,
 }
 
-trait Storage<T: Decodable + Encodable> {
+trait Storage<T> {
     fn store(&self, key: &str, value: &T) -> Result<(), Error>;
     fn load(&self) -> Result<HashMap<String, T>, Error>;
 }
@@ -93,10 +90,9 @@ impl HashedStorage {
     }
 }
 
-impl<T: Decodable + Encodable> Storage<T> for HashedStorage {
+impl<T> Storage<T> for HashedStorage {
     fn store(&self, key: &str, value: &T) -> Result<(), Error> {
         let mut file: fs::File = self.create_file(&self.get_filename(key)?)?;
-        file.write_all(encode(value, SizeLimit::Infinite)?.as_slice())?;
         file.sync_all()?;
 
         Ok(())
@@ -108,8 +104,9 @@ impl<T: Decodable + Encodable> Storage<T> for HashedStorage {
             match result {
                 Ok(entry) => {
                     if entry.path().is_file() {
-                        map.insert(entry.file_name().to_str().unwrap().to_string(),
-                                   decode(&self.read(entry.path())?[..])?);
+                        unimplemented!()
+                        // map.insert(entry.file_name().to_str().unwrap().to_string(),
+                        //            &self.read(entry.path())?[..]);
                     }
                 }
                 Err(error) => return Err(Error::from(io::Error::from(error))),
