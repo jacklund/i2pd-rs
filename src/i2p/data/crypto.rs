@@ -228,16 +228,23 @@ pub type RouterIdentity = KeysAndCert;
 
 impl KeysAndCert {
     pub fn deserialize<R: Read>(reader: &R) -> Result<KeysAndCert, Error> {
-        let mut buffer: [u8; 384];
-        reader.read_exact(&mut buffer)?;
+        let mut buffer: Vec<u8> = Vec::new();
+        reader.take(384).read_to_end(&mut buffer);
         let certificate = Certificate::deserialize(reader)?;
         let signing_key_type = match certificate {
             Certificate::Key(key_cert) => key_cert.signing_key_type,
             _ => SigningPublicKeyType::DSA_SHA1,
         };
-        let buffer_reader: &[u8] = &buffer;
-        let public_key = PublicKey::deserialize(buffer_reader)?;
-        let signing_key = SigningPublicKey::new(signing_key_type, buffer_reader)?;
+        if let Certificate::Key(_) = certificate {
+            let (_, extra_bytes) = SigningPublicKey::padding_size(signing_key_type)?;
+            if extra_bytes > 0 {
+                let mut extra_buffer: Vec<u8> = Vec::new();
+                reader.take(extra_bytes as u64).read_to_end(&mut extra_buffer);
+                buffer.extend(extra_buffer);
+            }
+        }
+        let public_key = PublicKey::deserialize(buffer.as_slice())?;
+        let signing_key = SigningPublicKey::new(signing_key_type, buffer.as_slice())?;
         Ok( KeysAndCert {
             public_key: public_key,
             signing_key: signing_key,
