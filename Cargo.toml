@@ -18,5 +18,6 @@ walkdir = "1.0.7"
 yaml-rust = "0.3.5"
 
 [dev-dependencies]
+base64 = "0.4.0"
 mockers = "0.5.7"
 tempdir = "0.3.5"

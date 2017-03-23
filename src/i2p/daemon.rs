@@ -10,7 +10,6 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-#[derive(Debug, Default)]
 pub struct Daemon {
     config: Config,
     data_dir: PathBuf,
@@ -113,9 +112,10 @@ impl Daemon {
     }
 
     pub fn new() -> Result<Daemon, Error> {
-        let mut daemon: Daemon = Default::default();
-        daemon.initialize()?;
+        // let mut daemon: Daemon = Default::default();
+        // daemon.initialize()?;
 
-        Ok(daemon)
+        // Ok(daemon)
+        unimplemented!()
     }
 }
