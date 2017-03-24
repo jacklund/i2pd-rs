@@ -20,11 +20,12 @@ impl PublicKey {
         data.len()
     }
 
-    pub fn deserialize<R: Read>(mut reader: R) -> Result<PublicKey, Error> {
-        let mut buffer: [u8; 256] = [0; 256];
-        reader.read_exact(&mut buffer)?;
+    pub fn deserialize<R: Read>(reader: &mut R) -> Result<PublicKey, Error> {
+        let mut buffer = vec![0u8; 256];
+        let bytes_read = reader.read(buffer.as_mut_slice())?;
+        println!("public key buffer = {:?}", buffer);
 
-        Ok(PublicKey::ElGamal(box buffer))
+        Ok(PublicKey::ElGamal(buffer.into_boxed_slice()))
     }
 }
 
@@ -127,9 +128,11 @@ impl SigningPublicKey {
     }
 
     pub fn new<R: Read>(key_type: SigningPublicKeyType,
-                        reader: R)
+                        reader: &mut R)
                         -> Result<SigningPublicKey, Error> {
         let (padding_size, extra_bytes) = SigningPublicKey::padding_size(&key_type)?;
+        println!("padding size = {:?}", padding_size);
+        println!("key length = {:?}", SigningPublicKey::length(&key_type));
         let result: Result<Vec<u8>, io::Error> =
             reader.bytes().skip(padding_size).take(SigningPublicKey::length(&key_type)).collect();
         if result.is_err() {
@@ -142,6 +145,7 @@ impl SigningPublicKey {
                                       Self::length(&key_type),
                                       data.len())))
         } else {
+            println!("Signing public key data = {:?}", data);
             Ok(SigningPublicKey::create_type(key_type, data.into_boxed_slice()))
         }
     }
@@ -209,14 +213,20 @@ pub enum Certificate {
 struct KeyCertificate {
     signing_key_type: SigningPublicKeyType,
     crypto_key_type: u16,
+    extra_bytes: Vec<u8>,
 }
 
 impl KeyCertificate {
     pub fn deserialize<R: Read>(mut reader: R) -> Result<KeyCertificate, Error> {
+        let signing_key_type = reader.read_u16::<BigEndian>()?;
+        let crypto_key_type = reader.read_u16::<BigEndian>()?;
+        let mut extra_bytes: Vec<u8> = Vec::new();
+        reader.read_to_end(&mut extra_bytes)?;
         Ok(KeyCertificate {
             signing_key_type:
-                SigningPublicKey::to_signing_public_key_type(reader.read_u16::<BigEndian>()?)?,
-            crypto_key_type: reader.read_u16::<BigEndian>()?,
+                SigningPublicKey::to_signing_public_key_type(signing_key_type)?,
+            crypto_key_type: crypto_key_type,
+            extra_bytes: extra_bytes,
         })
     }
 }
@@ -226,14 +236,14 @@ impl Certificate {
         let cert_type = reader.read_u8()?;
         let length = reader.read_u16::<BigEndian>()?;
         let mut payload = vec![0u8; length as usize];
-        reader.read(payload.as_mut_slice())?;
+        let bytes_read = reader.read(payload.as_mut_slice())?;
         match cert_type {
             0 => Ok(Certificate::Null),
             1 => Ok(Certificate::HashCash(str::from_utf8(payload.as_slice())?.to_string())),
             2 => Ok(Certificate::Hidden),
             3 => Ok(Certificate::Signed(payload.into_boxed_slice())),
             4 => Ok(Certificate::Multiple(payload.into_boxed_slice())),
-            5 => Ok(Certificate::Key(KeyCertificate::deserialize(reader)?)),
+            5 => Ok(Certificate::Key(KeyCertificate::deserialize(payload.as_slice())?)),
             _ => Err(Error::Crypto(format!("Unexpected cert type {} found", cert_type))),
         }
     }
@@ -251,20 +261,19 @@ pub type RouterIdentity = KeysAndCert;
 impl KeysAndCert {
     pub fn deserialize<R: Read>(mut reader: R) -> Result<KeysAndCert, Error> {
         let mut buffer = vec![0u8; 384];
-        reader.read(buffer.as_mut_slice())?;
+        let size_read = reader.read(buffer.as_mut_slice())?;
+        println!("Keys and cert buffer = {:?}", buffer);
         let certificate = Certificate::deserialize(&mut reader)?;
         let mut signing_key_type = SigningPublicKeyType::DSA_SHA1;
+        println!("signing key type = {:?}", signing_key_type);
+        let mut extra_bytes: Option<Vec<u8>> = None;
         if let Certificate::Key(ref key_cert) = certificate {
             signing_key_type = key_cert.signing_key_type.clone();
-            let (_, extra_bytes) = SigningPublicKey::padding_size(&signing_key_type)?;
-            if extra_bytes > 0 {
-                let mut extra_buffer: Vec<u8> = Vec::new();
-                reader.take(extra_bytes as u64).read_to_end(&mut extra_buffer);
-                buffer.extend(extra_buffer);
-            }
+            buffer.extend(key_cert.extra_bytes.clone());
         }
-        let public_key = PublicKey::deserialize(buffer.as_slice())?;
-        let signing_key = SigningPublicKey::new(signing_key_type, buffer.as_slice())?;
+        let mut reader = buffer.as_slice();
+        let public_key = PublicKey::deserialize(&mut reader)?;
+        let signing_key = SigningPublicKey::new(signing_key_type, &mut reader)?;
         Ok(KeysAndCert {
             public_key: public_key,
             signing_key: signing_key,
@@ -322,11 +331,109 @@ mod test {
                 assert_eq!(*public_key_data.as_slice(), *data);
             }
         };
-        assert_eq!(Certificate::Null, keys_and_cert.certificate);
         decode_result = decode(&values[2].trim_right());
         let signing_key_data = decode_result.unwrap();
         match keys_and_cert.signing_key {
             SigningPublicKey::DSA_SHA1(data) => assert_eq!(*signing_key_data.as_slice(), *data),
+            _ => assert!(false),
+        }
+        assert_eq!(Certificate::Null, keys_and_cert.certificate);
+    }
+
+    #[test]
+    fn test_deserialize_ECDSA_SHA256_P256_keys_and_cert() {
+        let values = read_fixture("ECDSA_SHA256_P256_Keys_and_Cert");
+
+        let mut decode_result = decode(&values[0].trim_right());
+        let result = decode_result.unwrap();
+        let keys_and_cert_result = KeysAndCert::deserialize(result.as_slice());
+        assert!(keys_and_cert_result.is_ok());
+        let keys_and_cert = keys_and_cert_result.unwrap();
+
+        decode_result = decode(&values[1].trim_right());
+        let public_key_data = decode_result.unwrap();
+        match keys_and_cert.public_key {
+            PublicKey::ElGamal(data) => {
+                assert_eq!(*public_key_data.as_slice(), *data);
+            }
+        };
+        decode_result = decode(&values[2].trim_right());
+        let signing_key_data = decode_result.unwrap();
+        match keys_and_cert.signing_key {
+            SigningPublicKey::ECDSA_SHA256_P256(data) => assert_eq!(*signing_key_data.as_slice(), *data),
+            _ => assert!(false),
+        }
+        match keys_and_cert.certificate {
+            Certificate::Key(key_cert) => {
+                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.signing_key_type, SigningPublicKeyType::ECDSA_SHA256_P256);
+            },
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn test_deserialize_ECDSA_SHA384_P384_keys_and_cert() {
+        let values = read_fixture("ECDSA_SHA384_P384_Keys_and_Cert");
+
+        let mut decode_result = decode(&values[0].trim_right());
+        let result = decode_result.unwrap();
+        let keys_and_cert_result = KeysAndCert::deserialize(result.as_slice());
+        assert!(keys_and_cert_result.is_ok());
+        let keys_and_cert = keys_and_cert_result.unwrap();
+
+        decode_result = decode(&values[1].trim_right());
+        let public_key_data = decode_result.unwrap();
+        match keys_and_cert.public_key {
+            PublicKey::ElGamal(data) => {
+                assert_eq!(*public_key_data.as_slice(), *data);
+            }
+        };
+        decode_result = decode(&values[2].trim_right());
+        let signing_key_data = decode_result.unwrap();
+        match keys_and_cert.signing_key {
+            SigningPublicKey::ECDSA_SHA384_P384(data) => assert_eq!(*signing_key_data.as_slice(), *data),
+            _ => assert!(false),
+        }
+        match keys_and_cert.certificate {
+            Certificate::Key(key_cert) => {
+                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.signing_key_type, SigningPublicKeyType::ECDSA_SHA384_P384);
+            },
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn test_deserialize_ECDSA_SHA512_P521_keys_and_cert() {
+        let values = read_fixture("ECDSA_SHA512_P521_Keys_and_Cert");
+
+        let mut decode_result = decode(&values[0].trim_right());
+        let result = decode_result.unwrap();
+        println!("result = {:?}", result);
+        println!("result length = {:?}", result.len());
+        let keys_and_cert_result = KeysAndCert::deserialize(result.as_slice());
+        assert!(keys_and_cert_result.is_ok());
+        let keys_and_cert = keys_and_cert_result.unwrap();
+
+        decode_result = decode(&values[1].trim_right());
+        let public_key_data = decode_result.unwrap();
+        match keys_and_cert.public_key {
+            PublicKey::ElGamal(data) => {
+                assert_eq!(*public_key_data.as_slice(), *data);
+            }
+        };
+        decode_result = decode(&values[2].trim_right());
+        let signing_key_data = decode_result.unwrap();
+        match keys_and_cert.signing_key {
+            SigningPublicKey::ECDSA_SHA512_P521(data) => assert_eq!(*signing_key_data.as_slice(), *data),
+            _ => assert!(false),
+        }
+        match keys_and_cert.certificate {
+            Certificate::Key(key_cert) => {
+                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.signing_key_type, SigningPublicKeyType::ECDSA_SHA512_P521);
+            },
             _ => assert!(false),
         }
     }
