@@ -437,4 +437,170 @@ mod test {
             _ => assert!(false),
         }
     }
+
+    #[test]
+    fn test_deserialize_EdDSA_SHA512_Ed25519_keys_and_cert() {
+        let values = read_fixture("EdDSA_SHA512_Ed25519_Keys_and_Cert");
+
+        let mut decode_result = decode(&values[0].trim_right());
+        let result = decode_result.unwrap();
+        println!("result = {:?}", result);
+        println!("result length = {:?}", result.len());
+        let keys_and_cert_result = KeysAndCert::deserialize(result.as_slice());
+        assert!(keys_and_cert_result.is_ok());
+        let keys_and_cert = keys_and_cert_result.unwrap();
+
+        decode_result = decode(&values[1].trim_right());
+        let public_key_data = decode_result.unwrap();
+        match keys_and_cert.public_key {
+            PublicKey::ElGamal(data) => {
+                assert_eq!(*public_key_data.as_slice(), *data);
+            }
+        };
+        decode_result = decode(&values[2].trim_right());
+        let signing_key_data = decode_result.unwrap();
+        match keys_and_cert.signing_key {
+            SigningPublicKey::EdDSA_SHA512_Ed25519(data) => assert_eq!(*signing_key_data.as_slice(), *data),
+            _ => assert!(false),
+        }
+        match keys_and_cert.certificate {
+            Certificate::Key(key_cert) => {
+                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.signing_key_type, SigningPublicKeyType::EdDSA_SHA512_Ed25519);
+            },
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn test_deserialize_EdDSA_SHA512_Ed25519ph_keys_and_cert() {
+        let values = read_fixture("EdDSA_SHA512_Ed25519ph_Keys_and_Cert");
+
+        let mut decode_result = decode(&values[0].trim_right());
+        let result = decode_result.unwrap();
+        println!("result = {:?}", result);
+        println!("result length = {:?}", result.len());
+        let keys_and_cert_result = KeysAndCert::deserialize(result.as_slice());
+        assert!(keys_and_cert_result.is_ok());
+        let keys_and_cert = keys_and_cert_result.unwrap();
+
+        decode_result = decode(&values[1].trim_right());
+        let public_key_data = decode_result.unwrap();
+        match keys_and_cert.public_key {
+            PublicKey::ElGamal(data) => {
+                assert_eq!(*public_key_data.as_slice(), *data);
+            }
+        };
+        decode_result = decode(&values[2].trim_right());
+        let signing_key_data = decode_result.unwrap();
+        match keys_and_cert.signing_key {
+            SigningPublicKey::EdDSA_SHA512_Ed25519ph(data) => assert_eq!(*signing_key_data.as_slice(), *data),
+            _ => assert!(false),
+        }
+        match keys_and_cert.certificate {
+            Certificate::Key(key_cert) => {
+                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.signing_key_type, SigningPublicKeyType::EdDSA_SHA512_Ed25519ph);
+            },
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn test_deserialize_RSA_SHA256_2048_keys_and_cert() {
+        let values = read_fixture("RSA_SHA256_2048_Keys_and_Cert");
+
+        let mut decode_result = decode(&values[0].trim_right());
+        let result = decode_result.unwrap();
+        println!("result = {:?}", result);
+        println!("result length = {:?}", result.len());
+        let keys_and_cert_result = KeysAndCert::deserialize(result.as_slice());
+        assert!(keys_and_cert_result.is_ok());
+        let keys_and_cert = keys_and_cert_result.unwrap();
+
+        decode_result = decode(&values[1].trim_right());
+        let public_key_data = decode_result.unwrap();
+        match keys_and_cert.public_key {
+            PublicKey::ElGamal(data) => {
+                assert_eq!(*public_key_data.as_slice(), *data);
+            }
+        };
+        decode_result = decode(&values[2].trim_right());
+        let signing_key_data = decode_result.unwrap();
+        match keys_and_cert.signing_key {
+            SigningPublicKey::RSA_SHA256_2048(data) => assert_eq!(*signing_key_data.as_slice(), *data),
+            _ => assert!(false),
+        }
+        match keys_and_cert.certificate {
+            Certificate::Key(key_cert) => {
+                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.signing_key_type, SigningPublicKeyType::RSA_SHA256_2048);
+            },
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn test_deserialize_RSA_SHA384_3072_keys_and_cert() {
+        let values = read_fixture("RSA_SHA384_3072_Keys_and_Cert");
+
+        let mut decode_result = decode(&values[0].trim_right());
+        let result = decode_result.unwrap();
+        let keys_and_cert_result = KeysAndCert::deserialize(result.as_slice());
+        assert!(keys_and_cert_result.is_ok());
+        let keys_and_cert = keys_and_cert_result.unwrap();
+
+        decode_result = decode(&values[1].trim_right());
+        let public_key_data = decode_result.unwrap();
+        match keys_and_cert.public_key {
+            PublicKey::ElGamal(data) => {
+                assert_eq!(*public_key_data.as_slice(), *data);
+            }
+        };
+        decode_result = decode(&values[2].trim_right());
+        let signing_key_data = decode_result.unwrap();
+        match keys_and_cert.signing_key {
+            SigningPublicKey::RSA_SHA384_3072(data) => assert_eq!(*signing_key_data.as_slice(), *data),
+            _ => assert!(false),
+        }
+        match keys_and_cert.certificate {
+            Certificate::Key(key_cert) => {
+                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.signing_key_type, SigningPublicKeyType::RSA_SHA384_3072);
+            },
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn test_deserialize_RSA_SHA512_4096_keys_and_cert() {
+        let values = read_fixture("RSA_SHA512_4096_Keys_and_Cert");
+
+        let mut decode_result = decode(&values[0].trim_right());
+        let result = decode_result.unwrap();
+        let keys_and_cert_result = KeysAndCert::deserialize(result.as_slice());
+        assert!(keys_and_cert_result.is_ok());
+        let keys_and_cert = keys_and_cert_result.unwrap();
+
+        decode_result = decode(&values[1].trim_right());
+        let public_key_data = decode_result.unwrap();
+        match keys_and_cert.public_key {
+            PublicKey::ElGamal(data) => {
+                assert_eq!(*public_key_data.as_slice(), *data);
+            }
+        };
+        decode_result = decode(&values[2].trim_right());
+        let signing_key_data = decode_result.unwrap();
+        match keys_and_cert.signing_key {
+            SigningPublicKey::RSA_SHA512_4096(data) => assert_eq!(*signing_key_data.as_slice(), *data),
+            _ => assert!(false),
+        }
+        match keys_and_cert.certificate {
+            Certificate::Key(key_cert) => {
+                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.signing_key_type, SigningPublicKeyType::RSA_SHA512_4096);
+            },
+            _ => assert!(false),
+        }
+    }
 }
