@@ -14,7 +14,25 @@ pub enum PublicKey {
     ElGamal(Box<[u8]>),
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum PublicKeyType {
+    ElGamal
+}
+
 impl PublicKey {
+    pub fn get_type(&self) -> PublicKeyType {
+        match *self {
+            PublicKey::ElGamal(_) => PublicKeyType::ElGamal,
+        }
+    }
+
+    pub fn to_type(t: u16) -> Result<PublicKeyType, Error> {
+        match t {
+            t if t == PublicKeyType::ElGamal as u16 => Ok(PublicKeyType::ElGamal),
+            _ => Err(Error::Crypto("Unknown public key type".to_string())),
+        }
+    }
+
     pub fn length(&self) -> usize {
         let PublicKey::ElGamal(ref data) = *self;
         data.len()
@@ -61,6 +79,10 @@ pub enum SigningPublicKeyType {
 }
 
 impl SigningPublicKey {
+    pub fn get_type(&self) -> SigningPublicKeyType {
+        self.key_type.clone()
+    }
+
     pub fn to_signing_public_key_type(t: u16) -> Result<SigningPublicKeyType, Error> {
         match t {
             t if t == SigningPublicKeyType::DSA_SHA1 as u16 => Ok(SigningPublicKeyType::DSA_SHA1),
@@ -106,7 +128,7 @@ impl SigningPublicKey {
         }
     }
 
-    pub fn create_type(key_type: SigningPublicKeyType, data: &Vec<u8>) -> SigningPublicKey {
+    pub fn new(key_type: SigningPublicKeyType, data: &Vec<u8>) -> SigningPublicKey {
         SigningPublicKey {
             key_type: key_type,
             data: data.clone(),
@@ -133,7 +155,7 @@ impl SigningPublicKey {
                                       Self::length(&key_type),
                                       data.len())))
         } else {
-            Ok(SigningPublicKey::create_type(key_type, &data))
+            Ok(SigningPublicKey::new(key_type, &data))
         }
     }
 
@@ -199,11 +221,20 @@ pub enum Certificate {
 #[derive(Debug, PartialEq)]
 pub struct KeyCertificate {
     signing_key_type: SigningPublicKeyType,
-    crypto_key_type: u16,
+    crypto_key_type: PublicKeyType,
     extra_bytes: Vec<u8>,
 }
 
 impl KeyCertificate {
+    pub fn new(public_key: &PublicKey, signing_key: &SigningPublicKey) -> Result<KeyCertificate, Error> {
+        let (_, extra_bytes) = SigningPublicKey::padding_size(&signing_key.get_type())?;
+        Ok(KeyCertificate {
+            crypto_key_type: public_key.get_type(),
+            signing_key_type: signing_key.get_type(),
+            extra_bytes: signing_key.data[signing_key.data.len() - extra_bytes..].to_vec(),
+        })
+    }
+
     pub fn deserialize<R: Read>(mut reader: R) -> Result<KeyCertificate, Error> {
         let signing_key_type = reader.read_u16::<BigEndian>()?;
         let crypto_key_type = reader.read_u16::<BigEndian>()?;
@@ -211,16 +242,23 @@ impl KeyCertificate {
         reader.read_to_end(&mut extra_bytes)?;
         Ok(KeyCertificate {
             signing_key_type: SigningPublicKey::to_signing_public_key_type(signing_key_type)?,
-            crypto_key_type: crypto_key_type,
+            crypto_key_type: PublicKey::to_type(crypto_key_type)?,
             extra_bytes: extra_bytes,
         })
     }
 
     pub fn serialize<W: Write>(&self, mut writer: W) -> Result<usize, Error> {
+        println!("KeyCertification.serialize()");
+        println!("Writing signing key type of {:?}", self.signing_key_type.clone());
+        println!("Writing signing key type of {:?}", self.signing_key_type.clone() as u16);
         writer.write_u16::<BigEndian>(self.signing_key_type.clone() as u16)?;
-        writer.write_u16::<BigEndian>(self.crypto_key_type)?;
+        println!("Wrote signing key type");
+        writer.write_u16::<BigEndian>(self.crypto_key_type.clone() as u16)?;
+        println!("Wrote crypto key type");
         let mut written: usize = 4;
+        println!("Key cert written = {:?}", written);
         written += writer.write(&self.extra_bytes)?;
+        println!("Key cert written = {:?}", written);
 
         Ok(written)
     }
@@ -259,7 +297,15 @@ impl Certificate {
                 written += writer.write(data.as_ref())?;
             }
             Certificate::Key(ref key_cert) => {
-                written = key_cert.serialize(writer)?;
+                writer.write_u8(CertificateType::Key as u8)?;
+                written += 1;
+                let mut buffer: Vec<u8> = Vec::new();
+                println!("Writing key cert into buffer");
+                key_cert.serialize(&mut buffer)?;
+                println!("Wrote key cert into buffer");
+                writer.write_u16::<BigEndian>(buffer.len() as u16)?;
+                written += 2;
+                written += writer.write(&buffer)?;
             }
         }
 
@@ -295,6 +341,7 @@ pub type RouterIdentity = KeysAndCert;
 impl KeysAndCert {
     pub fn serialize<W: Write>(&mut self, mut writer: W) -> Result<usize, Error> {
         let mut written = self.public_key.serialize(&mut writer)?;
+        println!("public key written = {:?}", written);
         let mut buffer: Vec<u8> = Vec::new();
         self.signing_key.serialize(&mut buffer)?;
         let mut signing_key_type = SigningPublicKeyType::DSA_SHA1;
@@ -309,8 +356,11 @@ impl KeysAndCert {
         }
         let padding = vec![0; padding_size];
         written += writer.write(padding.as_slice())?;
+        println!("padding written = {:?}", written);
         written += writer.write(&buffer[..buffer.len() - extra_bytes])?;
+        println!("data written = {:?}", written);
         written += self.certificate.serialize(writer)?;
+        println!("certificate written = {:?}", written);
 
         Ok(written)
     }
@@ -424,6 +474,37 @@ mod test {
     }
 
     #[test]
+    fn test_serialize_ECDSA_SHA256_P256_keys_and_cert() {
+        let values = read_fixture("ECDSA_SHA256_P256_Keys_and_Cert");
+
+        let mut decode_result = decode(&values[0].trim_right());
+        let keys_and_cert_data = decode_result.unwrap();
+
+        decode_result = decode(&values[1].trim_right());
+        let public_key_data = decode_result.unwrap();
+
+        decode_result = decode(&values[2].trim_right());
+        let signing_key_data = decode_result.unwrap();
+
+        let public_key = PublicKey::ElGamal(public_key_data.into_boxed_slice());
+        let signing_key = SigningPublicKey::new(SigningPublicKeyType::ECDSA_SHA256_P256, &signing_key_data);
+        let key_cert = KeyCertificate::new(&public_key, &signing_key).unwrap();
+        let mut keys_and_cert = KeysAndCert {
+            public_key: public_key,
+            signing_key: signing_key,
+            certificate: Certificate::Key(key_cert),
+        };
+
+        let mut buffer: Vec<u8> = Vec::new();
+        let size = keys_and_cert.serialize(&mut buffer).unwrap();
+        let (padding_size, _) = SigningPublicKey::padding_size(&SigningPublicKeyType::ECDSA_SHA256_P256).unwrap();
+        assert_eq!(keys_and_cert_data[..256], buffer[..256]);
+        println!("data = {:?}", &keys_and_cert_data[256 + padding_size..]);
+        println!("mine = {:?}", &buffer[256 + padding_size..]);
+        assert_eq!(keys_and_cert_data[256 + padding_size..size], buffer[256 + padding_size..]);
+    }
+
+    #[test]
     fn test_deserialize_ECDSA_SHA256_P256_keys_and_cert() {
         let values = read_fixture("ECDSA_SHA256_P256_Keys_and_Cert");
 
@@ -447,7 +528,7 @@ mod test {
         assert_eq!(signing_key_data, keys_and_cert.signing_key.data);
         match keys_and_cert.certificate {
             Certificate::Key(key_cert) => {
-                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.crypto_key_type, PublicKeyType::ElGamal);
                 assert_eq!(key_cert.signing_key_type,
                            SigningPublicKeyType::ECDSA_SHA256_P256);
             }
@@ -479,7 +560,7 @@ mod test {
         assert_eq!(signing_key_data, keys_and_cert.signing_key.data);
         match keys_and_cert.certificate {
             Certificate::Key(key_cert) => {
-                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.crypto_key_type, PublicKeyType::ElGamal);
                 assert_eq!(key_cert.signing_key_type,
                            SigningPublicKeyType::ECDSA_SHA384_P384);
             }
@@ -511,7 +592,7 @@ mod test {
         assert_eq!(signing_key_data, keys_and_cert.signing_key.data);
         match keys_and_cert.certificate {
             Certificate::Key(key_cert) => {
-                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.crypto_key_type, PublicKeyType::ElGamal);
                 assert_eq!(key_cert.signing_key_type,
                            SigningPublicKeyType::ECDSA_SHA512_P521);
             }
@@ -543,7 +624,7 @@ mod test {
         assert_eq!(signing_key_data, keys_and_cert.signing_key.data);
         match keys_and_cert.certificate {
             Certificate::Key(key_cert) => {
-                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.crypto_key_type, PublicKeyType::ElGamal);
                 assert_eq!(key_cert.signing_key_type,
                            SigningPublicKeyType::EdDSA_SHA512_Ed25519);
             }
@@ -575,7 +656,7 @@ mod test {
         assert_eq!(signing_key_data, keys_and_cert.signing_key.data);
         match keys_and_cert.certificate {
             Certificate::Key(key_cert) => {
-                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.crypto_key_type, PublicKeyType::ElGamal);
                 assert_eq!(key_cert.signing_key_type,
                            SigningPublicKeyType::EdDSA_SHA512_Ed25519ph);
             }
@@ -607,7 +688,7 @@ mod test {
         assert_eq!(signing_key_data, keys_and_cert.signing_key.data);
         match keys_and_cert.certificate {
             Certificate::Key(key_cert) => {
-                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.crypto_key_type, PublicKeyType::ElGamal);
                 assert_eq!(key_cert.signing_key_type,
                            SigningPublicKeyType::RSA_SHA256_2048);
             }
@@ -639,7 +720,7 @@ mod test {
         assert_eq!(signing_key_data, keys_and_cert.signing_key.data);
         match keys_and_cert.certificate {
             Certificate::Key(key_cert) => {
-                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.crypto_key_type, PublicKeyType::ElGamal);
                 assert_eq!(key_cert.signing_key_type,
                            SigningPublicKeyType::RSA_SHA384_3072);
             }
@@ -671,7 +752,7 @@ mod test {
         assert_eq!(signing_key_data, keys_and_cert.signing_key.data);
         match keys_and_cert.certificate {
             Certificate::Key(key_cert) => {
-                assert_eq!(key_cert.crypto_key_type, 0);
+                assert_eq!(key_cert.crypto_key_type, PublicKeyType::ElGamal);
                 assert_eq!(key_cert.signing_key_type,
                            SigningPublicKeyType::RSA_SHA512_4096);
             }
