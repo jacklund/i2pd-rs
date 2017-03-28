@@ -2,6 +2,7 @@
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use i2p::error::Error;
+use rand::{OsRng, Rand, Rng};
 use std::io::{self, Read, Write};
 use std::str;
 
@@ -250,19 +251,10 @@ impl KeyCertificate {
     }
 
     pub fn serialize<W: Write>(&self, mut writer: W) -> Result<usize, Error> {
-        println!("KeyCertification.serialize()");
-        println!("Writing signing key type of {:?}",
-                 self.signing_key_type.clone());
-        println!("Writing signing key type of {:?}",
-                 self.signing_key_type.clone() as u16);
         writer.write_u16::<BigEndian>(self.signing_key_type.clone() as u16)?;
-        println!("Wrote signing key type");
         writer.write_u16::<BigEndian>(self.crypto_key_type.clone() as u16)?;
-        println!("Wrote crypto key type");
         let mut written: usize = 4;
-        println!("Key cert written = {:?}", written);
         written += writer.write(&self.extra_bytes)?;
-        println!("Key cert written = {:?}", written);
 
         Ok(written)
     }
@@ -304,9 +296,7 @@ impl Certificate {
                 writer.write_u8(CertificateType::Key as u8)?;
                 written += 1;
                 let mut buffer: Vec<u8> = Vec::new();
-                println!("Writing key cert into buffer");
                 key_cert.serialize(&mut buffer)?;
-                println!("Wrote key cert into buffer");
                 writer.write_u16::<BigEndian>(buffer.len() as u16)?;
                 written += 2;
                 written += writer.write(&buffer)?;
@@ -340,12 +330,26 @@ pub struct KeysAndCert {
     certificate: Certificate,
 }
 
+struct Random {
+    rng: OsRng,
+}
+
+impl Random {
+    pub fn new() -> Result<Random, Error> {
+        let rng = OsRng::new()?;
+        Ok(Random{ rng: rng })
+    }
+
+    fn generate<T: Rand>(&mut self, length: usize) -> Vec<T> {
+        self.rng.gen_iter::<T>().take(length).collect::<Vec<T>>()
+    }
+}
+
 pub type RouterIdentity = KeysAndCert;
 
 impl KeysAndCert {
     pub fn serialize<W: Write>(&mut self, mut writer: W) -> Result<usize, Error> {
         let mut written = self.public_key.serialize(&mut writer)?;
-        println!("public key written = {:?}", written);
         let mut buffer: Vec<u8> = Vec::new();
         self.signing_key.serialize(&mut buffer)?;
         let mut signing_key_type = SigningPublicKeyType::DSA_SHA1;
@@ -358,13 +362,11 @@ impl KeysAndCert {
             extra_bytes = extra;
             key_cert.extra_bytes = buffer[buffer.len() - extra_bytes..].to_vec();
         }
-        let padding = vec![0; padding_size];
+        let padding = Random::new()?.generate::<u8>(padding_size);
+        println!("padding = {:?}", padding);
         written += writer.write(padding.as_slice())?;
-        println!("padding written = {:?}", written);
         written += writer.write(&buffer[..buffer.len() - extra_bytes])?;
-        println!("data written = {:?}", written);
         written += self.certificate.serialize(writer)?;
-        println!("certificate written = {:?}", written);
 
         Ok(written)
     }

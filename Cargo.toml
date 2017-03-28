@@ -9,6 +9,7 @@ clap = "2.20.5"
 log = "0.3.6"
 log4rs = "0.6.2"
 mockers_macros = "0.5.7"
+rand = "0.3.15"
 rust-ini = { git = "https://github.com/jacklund/rust-ini.git" }
 serde = "0.9.11"
 serde_derive = "0.9.11"

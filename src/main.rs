@@ -13,6 +13,7 @@ extern crate log;
 extern crate log4rs;
 #[cfg(test)]
 extern crate mockers;
+extern crate rand;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
