@@ -2,11 +2,7 @@
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use i2p::error::Error;
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
-use std::io::{self, BufReader, Read, Seek, SeekFrom, Write};
-use std::marker::Sized;
-use std::mem;
+use std::io::{self, Read, Write};
 use std::str;
 
 #[derive(Debug)]
@@ -19,17 +15,19 @@ pub enum PublicKeyType {
     ElGamal,
 }
 
+impl PublicKeyType {
+    pub fn from_u16(t: u16) -> Result<PublicKeyType, Error> {
+        match t {
+            t if t == PublicKeyType::ElGamal as u16 => Ok(PublicKeyType::ElGamal),
+            _ => Err(Error::Crypto("Unknown public key type".to_string())),
+        }
+    }
+}
+
 impl PublicKey {
     pub fn get_type(&self) -> PublicKeyType {
         match *self {
             PublicKey::ElGamal(_) => PublicKeyType::ElGamal,
-        }
-    }
-
-    pub fn to_type(t: u16) -> Result<PublicKeyType, Error> {
-        match t {
-            t if t == PublicKeyType::ElGamal as u16 => Ok(PublicKeyType::ElGamal),
-            _ => Err(Error::Crypto("Unknown public key type".to_string())),
         }
     }
 
@@ -45,7 +43,7 @@ impl PublicKey {
 
     pub fn deserialize<R: Read>(reader: &mut R) -> Result<PublicKey, Error> {
         let mut buffer = vec![0u8; 256];
-        reader.read(buffer.as_mut_slice())?;
+        reader.read_exact(buffer.as_mut_slice())?;
 
         Ok(PublicKey::ElGamal(buffer.into_boxed_slice()))
     }
@@ -78,12 +76,8 @@ pub enum SigningPublicKeyType {
     EdDSA_SHA512_Ed25519ph,
 }
 
-impl SigningPublicKey {
-    pub fn get_type(&self) -> SigningPublicKeyType {
-        self.key_type.clone()
-    }
-
-    pub fn to_signing_public_key_type(t: u16) -> Result<SigningPublicKeyType, Error> {
+impl SigningPublicKeyType {
+    pub fn from_u16(t: u16) -> Result<SigningPublicKeyType, Error> {
         match t {
             t if t == SigningPublicKeyType::DSA_SHA1 as u16 => Ok(SigningPublicKeyType::DSA_SHA1),
             t if t == SigningPublicKeyType::ECDSA_SHA256_P256 as u16 => {
@@ -113,6 +107,12 @@ impl SigningPublicKey {
             _ => Err(Error::Crypto("Unknown signing public key type".to_string())),
         }
     }
+}
+
+impl SigningPublicKey {
+    pub fn get_type(&self) -> SigningPublicKeyType {
+        self.key_type.clone()
+    }
 
     pub fn length(key_type: &SigningPublicKeyType) -> usize {
         match *key_type {
@@ -123,15 +123,15 @@ impl SigningPublicKey {
             SigningPublicKeyType::RSA_SHA256_2048 => 256,
             SigningPublicKeyType::RSA_SHA384_3072 => 384,
             SigningPublicKeyType::RSA_SHA512_4096 => 512,
-            SigningPublicKeyType::EdDSA_SHA512_Ed25519 => 32,
+            SigningPublicKeyType::EdDSA_SHA512_Ed25519 |
             SigningPublicKeyType::EdDSA_SHA512_Ed25519ph => 32,
         }
     }
 
-    pub fn new(key_type: SigningPublicKeyType, data: &Vec<u8>) -> SigningPublicKey {
+    pub fn new(key_type: SigningPublicKeyType, data: &[u8]) -> SigningPublicKey {
         SigningPublicKey {
             key_type: key_type,
-            data: data.clone(),
+            data: data.to_vec(),
         }
     }
 
@@ -243,8 +243,8 @@ impl KeyCertificate {
         let mut extra_bytes: Vec<u8> = Vec::new();
         reader.read_to_end(&mut extra_bytes)?;
         Ok(KeyCertificate {
-            signing_key_type: SigningPublicKey::to_signing_public_key_type(signing_key_type)?,
-            crypto_key_type: PublicKey::to_type(crypto_key_type)?,
+            signing_key_type: SigningPublicKeyType::from_u16(signing_key_type)?,
+            crypto_key_type: PublicKeyType::from_u16(crypto_key_type)?,
             extra_bytes: extra_bytes,
         })
     }
@@ -371,7 +371,7 @@ impl KeysAndCert {
 
     pub fn deserialize<R: Read>(mut reader: R) -> Result<KeysAndCert, Error> {
         let mut buffer = vec![0u8; 384];
-        reader.read(buffer.as_mut_slice())?;
+        reader.read_exact(buffer.as_mut_slice())?;
         let certificate = Certificate::deserialize(&mut reader)?;
         let mut signing_key_type = SigningPublicKeyType::DSA_SHA1;
         if let Certificate::Key(ref key_cert) = certificate {
