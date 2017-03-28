@@ -500,8 +500,6 @@ mod test {
         let (padding_size, _) =
             SigningPublicKey::padding_size(&SigningPublicKeyType::ECDSA_SHA256_P256).unwrap();
         assert_eq!(keys_and_cert_data[..256], buffer[..256]);
-        println!("data = {:?}", &keys_and_cert_data[256 + padding_size..]);
-        println!("mine = {:?}", &buffer[256 + padding_size..]);
         assert_eq!(keys_and_cert_data[256 + padding_size..size],
                    buffer[256 + padding_size..]);
     }
@@ -534,6 +532,30 @@ mod test {
     }
 
     #[test]
+    fn test_serialize_ECDSA_SHA384_P384_keys_and_cert() {
+        let (keys_and_cert_data, public_key_data, signing_key_data) =
+            get_key_and_cert_fixture_data("ECDSA_SHA384_P384_Keys_and_Cert");
+
+        let public_key = PublicKey::ElGamal(public_key_data.into_boxed_slice());
+        let signing_key = SigningPublicKey::new(SigningPublicKeyType::ECDSA_SHA384_P384,
+                                                &signing_key_data);
+        let key_cert = KeyCertificate::new(&public_key, &signing_key).unwrap();
+        let mut keys_and_cert = KeysAndCert {
+            public_key: public_key,
+            signing_key: signing_key,
+            certificate: Certificate::Key(key_cert),
+        };
+
+        let mut buffer: Vec<u8> = Vec::new();
+        let size = keys_and_cert.serialize(&mut buffer).unwrap();
+        let (padding_size, _) =
+            SigningPublicKey::padding_size(&SigningPublicKeyType::ECDSA_SHA384_P384).unwrap();
+        assert_eq!(keys_and_cert_data[..256], buffer[..256]);
+        assert_eq!(keys_and_cert_data[256 + padding_size..size],
+                   buffer[256 + padding_size..]);
+    }
+
+    #[test]
     fn test_deserialize_ECDSA_SHA384_P384_keys_and_cert() {
         let (keys_and_cert_data, public_key_data, signing_key_data) =
             get_key_and_cert_fixture_data("ECDSA_SHA384_P384_Keys_and_Cert");
@@ -558,6 +580,30 @@ mod test {
             }
             _ => assert!(false),
         }
+    }
+
+    #[test]
+    fn test_serialize_ECDSA_SHA512_P521_keys_and_cert() {
+        let (keys_and_cert_data, public_key_data, signing_key_data) =
+            get_key_and_cert_fixture_data("ECDSA_SHA512_P521_Keys_and_Cert");
+
+        let public_key = PublicKey::ElGamal(public_key_data.into_boxed_slice());
+        let signing_key = SigningPublicKey::new(SigningPublicKeyType::ECDSA_SHA512_P521,
+                                                &signing_key_data);
+        let key_cert = KeyCertificate::new(&public_key, &signing_key).unwrap();
+        let mut keys_and_cert = KeysAndCert {
+            public_key: public_key,
+            signing_key: signing_key,
+            certificate: Certificate::Key(key_cert),
+        };
+
+        let mut buffer: Vec<u8> = Vec::new();
+        let size = keys_and_cert.serialize(&mut buffer).unwrap();
+        let (padding_size, _) =
+            SigningPublicKey::padding_size(&SigningPublicKeyType::ECDSA_SHA512_P521).unwrap();
+        assert_eq!(keys_and_cert_data[..256], buffer[..256]);
+        assert_eq!(keys_and_cert_data[256 + padding_size..size],
+                   buffer[256 + padding_size..]);
     }
 
     #[test]
@@ -588,6 +634,30 @@ mod test {
     }
 
     #[test]
+    fn test_serialize_EdDSA_SHA512_Ed25519_keys_and_cert() {
+        let (keys_and_cert_data, public_key_data, signing_key_data) =
+            get_key_and_cert_fixture_data("EdDSA_SHA512_Ed25519_Keys_and_Cert");
+
+        let public_key = PublicKey::ElGamal(public_key_data.into_boxed_slice());
+        let signing_key = SigningPublicKey::new(SigningPublicKeyType::EdDSA_SHA512_Ed25519,
+                                                &signing_key_data);
+        let key_cert = KeyCertificate::new(&public_key, &signing_key).unwrap();
+        let mut keys_and_cert = KeysAndCert {
+            public_key: public_key,
+            signing_key: signing_key,
+            certificate: Certificate::Key(key_cert),
+        };
+
+        let mut buffer: Vec<u8> = Vec::new();
+        let size = keys_and_cert.serialize(&mut buffer).unwrap();
+        let (padding_size, _) =
+            SigningPublicKey::padding_size(&SigningPublicKeyType::EdDSA_SHA512_Ed25519).unwrap();
+        assert_eq!(keys_and_cert_data[..256], buffer[..256]);
+        assert_eq!(keys_and_cert_data[256 + padding_size..size],
+                   buffer[256 + padding_size..]);
+    }
+
+    #[test]
     fn test_deserialize_EdDSA_SHA512_Ed25519_keys_and_cert() {
         let (keys_and_cert_data, public_key_data, signing_key_data) =
             get_key_and_cert_fixture_data("EdDSA_SHA512_Ed25519_Keys_and_Cert");
@@ -612,6 +682,30 @@ mod test {
             }
             _ => assert!(false),
         }
+    }
+
+    #[test]
+    fn test_serialize_EdDSA_SHA512_Ed25519ph_keys_and_cert() {
+        let (keys_and_cert_data, public_key_data, signing_key_data) =
+            get_key_and_cert_fixture_data("EdDSA_SHA512_Ed25519ph_Keys_and_Cert");
+
+        let public_key = PublicKey::ElGamal(public_key_data.into_boxed_slice());
+        let signing_key = SigningPublicKey::new(SigningPublicKeyType::EdDSA_SHA512_Ed25519ph,
+                                                &signing_key_data);
+        let key_cert = KeyCertificate::new(&public_key, &signing_key).unwrap();
+        let mut keys_and_cert = KeysAndCert {
+            public_key: public_key,
+            signing_key: signing_key,
+            certificate: Certificate::Key(key_cert),
+        };
+
+        let mut buffer: Vec<u8> = Vec::new();
+        let size = keys_and_cert.serialize(&mut buffer).unwrap();
+        let (padding_size, _) =
+            SigningPublicKey::padding_size(&SigningPublicKeyType::EdDSA_SHA512_Ed25519ph).unwrap();
+        assert_eq!(keys_and_cert_data[..256], buffer[..256]);
+        assert_eq!(keys_and_cert_data[256 + padding_size..size],
+                   buffer[256 + padding_size..]);
     }
 
     #[test]
@@ -642,6 +736,31 @@ mod test {
     }
 
     #[test]
+    fn test_serialize_RSA_SHA256_2048_keys_and_cert() {
+        let (keys_and_cert_data, public_key_data, signing_key_data) =
+            get_key_and_cert_fixture_data("RSA_SHA256_2048_Keys_and_Cert");
+
+        let public_key = PublicKey::ElGamal(public_key_data.into_boxed_slice());
+        let signing_key = SigningPublicKey::new(SigningPublicKeyType::RSA_SHA256_2048,
+                                                &signing_key_data);
+        let key_cert = KeyCertificate::new(&public_key, &signing_key).unwrap();
+        let mut keys_and_cert = KeysAndCert {
+            public_key: public_key,
+            signing_key: signing_key,
+            certificate: Certificate::Key(key_cert),
+        };
+
+        let mut buffer: Vec<u8> = Vec::new();
+        let size = keys_and_cert.serialize(&mut buffer).unwrap();
+        let (padding_size, _) =
+            SigningPublicKey::padding_size(&SigningPublicKeyType::RSA_SHA256_2048).unwrap();
+        assert_eq!(keys_and_cert_data[..256], buffer[..256]);
+        assert_eq!(keys_and_cert_data[256 + padding_size..size],
+                   buffer[256 + padding_size..]);
+    }
+
+
+    #[test]
     fn test_deserialize_RSA_SHA256_2048_keys_and_cert() {
         let (keys_and_cert_data, public_key_data, signing_key_data) =
             get_key_and_cert_fixture_data("RSA_SHA256_2048_Keys_and_Cert");
@@ -669,6 +788,30 @@ mod test {
     }
 
     #[test]
+    fn test_serialize_RSA_SHA384_3072_keys_and_cert() {
+        let (keys_and_cert_data, public_key_data, signing_key_data) =
+            get_key_and_cert_fixture_data("RSA_SHA384_3072_Keys_and_Cert");
+
+        let public_key = PublicKey::ElGamal(public_key_data.into_boxed_slice());
+        let signing_key = SigningPublicKey::new(SigningPublicKeyType::RSA_SHA384_3072,
+                                                &signing_key_data);
+        let key_cert = KeyCertificate::new(&public_key, &signing_key).unwrap();
+        let mut keys_and_cert = KeysAndCert {
+            public_key: public_key,
+            signing_key: signing_key,
+            certificate: Certificate::Key(key_cert),
+        };
+
+        let mut buffer: Vec<u8> = Vec::new();
+        let size = keys_and_cert.serialize(&mut buffer).unwrap();
+        let (padding_size, _) =
+            SigningPublicKey::padding_size(&SigningPublicKeyType::RSA_SHA384_3072).unwrap();
+        assert_eq!(keys_and_cert_data[..256], buffer[..256]);
+        assert_eq!(keys_and_cert_data[256 + padding_size..size],
+                   buffer[256 + padding_size..]);
+    }
+
+    #[test]
     fn test_deserialize_RSA_SHA384_3072_keys_and_cert() {
         let (keys_and_cert_data, public_key_data, signing_key_data) =
             get_key_and_cert_fixture_data("RSA_SHA384_3072_Keys_and_Cert");
@@ -693,6 +836,30 @@ mod test {
             }
             _ => assert!(false),
         }
+    }
+
+    #[test]
+    fn test_serialize_RSA_SHA512_4096_keys_and_cert() {
+        let (keys_and_cert_data, public_key_data, signing_key_data) =
+            get_key_and_cert_fixture_data("RSA_SHA512_4096_Keys_and_Cert");
+
+        let public_key = PublicKey::ElGamal(public_key_data.into_boxed_slice());
+        let signing_key = SigningPublicKey::new(SigningPublicKeyType::RSA_SHA512_4096,
+                                                &signing_key_data);
+        let key_cert = KeyCertificate::new(&public_key, &signing_key).unwrap();
+        let mut keys_and_cert = KeysAndCert {
+            public_key: public_key,
+            signing_key: signing_key,
+            certificate: Certificate::Key(key_cert),
+        };
+
+        let mut buffer: Vec<u8> = Vec::new();
+        let size = keys_and_cert.serialize(&mut buffer).unwrap();
+        let (padding_size, _) =
+            SigningPublicKey::padding_size(&SigningPublicKeyType::RSA_SHA512_4096).unwrap();
+        assert_eq!(keys_and_cert_data[..256], buffer[..256]);
+        assert_eq!(keys_and_cert_data[256 + padding_size..size],
+                   buffer[256 + padding_size..]);
     }
 
     #[test]
