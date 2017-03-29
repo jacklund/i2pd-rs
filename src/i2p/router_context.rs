@@ -6,6 +6,7 @@ use std::default::Default;
 
 const I2PD_NET_ID: &str = "2";
 
+#[derive(Default)]
 pub struct RouterContext {
     net_id: String,
     ipv4: bool,
@@ -16,7 +17,7 @@ pub struct RouterContext {
     flood_fill: bool,
     bandwidth_limit: u32,
     bandwidth_type: Option<BandwidthType>,
-    router_info: RouterInfo,
+    router_info: Option<RouterInfo>,
 }
 
 #[derive(Debug)]
@@ -29,11 +30,10 @@ enum BandwidthType {
 
 impl RouterContext {
     pub fn new(config: &Config) -> Result<RouterContext, Error> {
-        // let mut context: RouterContext = Default::default();
-        // context.initialize(config)?;
+        let mut context: RouterContext = Default::default();
+        context.initialize(config)?;
 
-        // Ok(context)
-        unimplemented!()
+        Ok(context)
     }
 
     fn initialize(&mut self, config: &Config) -> Result<(), Error> {

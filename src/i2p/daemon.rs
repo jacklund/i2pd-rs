@@ -75,7 +75,7 @@ impl Daemon {
         Ok(data_dir)
     }
 
-    fn get_data_dir(&self, config: &Config) -> Result<PathBuf, Error> {
+    fn get_data_dir(config: &Config) -> Result<PathBuf, Error> {
         match config.get_value("datadir") {
             Some(dir) => {
                 let mut datadir_path = PathBuf::new();
@@ -89,33 +89,34 @@ impl Daemon {
         }
     }
 
-    fn initialize(&mut self) -> Result<(), Error> {
-        self.config = Config::get_config()?;
-        self.data_dir = self.get_data_dir(&self.config)?;
-        self.is_daemon = self.config.get_bool_value("daemon", false)?;
-        logging::configure(&self.config, &self.data_dir)?;
-        self.router_context = RouterContext::new(&self.config)?;
-        self.netdb = NetDB::new(&self.config, &self.data_dir)?;
-        self.transports = Transports::new();
+    pub fn new() -> Result<Daemon, Error> {
+        let config = Config::get_config()?;
+        let data_dir = Self::get_data_dir(&config)?;
+        let is_daemon = config.get_bool_value("daemon", false)?;
+        logging::configure(&config, &data_dir)?;
+        let router_context = RouterContext::new(&config)?;
+        let netdb = NetDB::new(&config, &data_dir)?;
+        let transports = Transports::new();
 
-        let http = self.config.get_bool_value("http.enabled", true)?;
+        let http = config.get_bool_value("http.enabled", true)?;
+        let mut http_server = None;
         if http {
-            let http_address = self.config.get_value_with_default("http.address", "127.0.0.1");
-            let http_port = self.config.get_int_value("http.port", 7070)?;
+            let http_address = config.get_value_with_default("http.address", "127.0.0.1");
+            let http_port = config.get_int_value("http.port", 7070)?;
             info!("Daemon starting HTTP server at {}:{}",
                   http_address,
                   http_port);
-            self.http_server = Some(HTTPServer::new(&http_address, http_port)?);
+            http_server = Some(HTTPServer::new(&http_address, http_port)?);
         }
 
-        Ok(())
-    }
-
-    pub fn new() -> Result<Daemon, Error> {
-        // let mut daemon: Daemon = Default::default();
-        // daemon.initialize()?;
-
-        // Ok(daemon)
-        unimplemented!()
+        Ok(Daemon {
+            config: config,
+            data_dir: data_dir,
+            is_daemon: is_daemon,
+            router_context: router_context,
+            netdb: netdb,
+            transports: transports,
+            http_server: http_server,
+        })
     }
 }
