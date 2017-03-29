@@ -91,14 +91,17 @@ impl Config {
                 .help("run in background"))
             .get_matches());
 
+        println!("Getting config path");
         let config = match get_config_path(&cmd_line) {
             Some(path) => {
+                println!("Loading config file {}", &path);
                 let ini = Ini::load_from_file(&path)?;
                 merge_configs(Config::convert(ini), cmd_line)
             }
             None => cmd_line,
         };
 
+        println!("Returning config {:?}", config);
         Ok(config)
     }
 
