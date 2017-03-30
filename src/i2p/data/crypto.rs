@@ -20,7 +20,7 @@ impl PublicKeyType {
     pub fn from_u16(t: u16) -> Result<PublicKeyType, Error> {
         match t {
             t if t == PublicKeyType::ElGamal as u16 => Ok(PublicKeyType::ElGamal),
-            _ => Err(Error::Crypto("Unknown public key type".to_string())),
+            _ => Err(Error::Crypto(format!("Unknown public key type"))),
         }
     }
 }
@@ -105,7 +105,7 @@ impl SigningPublicKeyType {
             t if t == SigningPublicKeyType::EdDSA_SHA512_Ed25519ph as u16 => {
                 Ok(SigningPublicKeyType::EdDSA_SHA512_Ed25519ph)
             }
-            _ => Err(Error::Crypto("Unknown signing public key type".to_string())),
+            _ => Err(Error::Crypto(format!("Unknown signing public key type"))),
         }
     }
 }
@@ -153,8 +153,8 @@ impl SigningPublicKey {
         if data.len() != Self::length(&key_type) {
             Err(Error::Crypto(format!("Expected signing public key of length {}, got one of \
                                        length {}",
-                                      Self::length(&key_type),
-                                      data.len())))
+                                    Self::length(&key_type),
+                                    data.len())))
         } else {
             Ok(SigningPublicKey::new(key_type, &data))
         }
@@ -337,7 +337,7 @@ struct Random {
 impl Random {
     pub fn new() -> Result<Random, Error> {
         let rng = OsRng::new()?;
-        Ok(Random{ rng: rng })
+        Ok(Random { rng: rng })
     }
 
     fn generate<T: Rand>(&mut self, length: usize) -> Vec<T> {
@@ -363,7 +363,6 @@ impl KeysAndCert {
             key_cert.extra_bytes = buffer[buffer.len() - extra_bytes..].to_vec();
         }
         let padding = Random::new()?.generate::<u8>(padding_size);
-        println!("padding = {:?}", padding);
         written += writer.write(padding.as_slice())?;
         written += writer.write(&buffer[..buffer.len() - extra_bytes])?;
         written += self.certificate.serialize(writer)?;

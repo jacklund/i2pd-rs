@@ -49,11 +49,12 @@ impl HashedStorage {
         dir.push(data_dir);
         dir.push(app);
         dir.push(kind);
+        info!("Creating storage directory {:?}", dir);
         if !dir.exists() {
             fs::create_dir_all(dir.to_owned())?;
         } else if !dir.is_dir() {
             return Err(Error::Configuration(format!("Path {} exists but is not a directory",
-                                                    dir.to_str().unwrap())));
+                                           dir.to_str().unwrap())));
         }
 
         Ok(dir)

@@ -1,29 +1,13 @@
-use i2p::config::Config;
-use i2p::error::Error;
+use i2p::error::{Error, LogError};
 use log4rs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-pub fn configure(config: &Config, data_dir: &PathBuf) -> Result<(), Error> {
-    let config_file = config.get_as_path("log4rs_config");
-    match config_file {
-        Some(file) => {
-            if file.as_path().is_file() {
-                Ok(log4rs::init_file(file, Default::default())?)
-            } else {
-                Err(Error::Configuration(format!("Bad logging config file {}",
-                                                 file.to_str().unwrap())))
-            }
-        }
-        None => {
-            let mut path_buf: PathBuf = PathBuf::from(data_dir);
-            path_buf.push("log4rs.yml");
-            if path_buf.as_path().is_file() {
-                Ok(log4rs::init_file(path_buf, Default::default())?)
-            } else if Path::new("log4rs.yml").is_file() {
-                Ok(log4rs::init_file("log4rs.yml", Default::default())?)
-            } else {
-                Err(Error::Configuration("No logging configuration file provided".to_string()))
-            }
-        }
+pub fn initialize(config_dir: PathBuf) -> Result<(), Error> {
+    let mut config_path = PathBuf::from(config_dir);
+    config_path.push("log4rs.yml");
+    if let Err(error) = log4rs::init_file(config_path.as_path(), log4rs::file::Deserializers::new()) {
+        return Err(Error::Logging(LogError::LogError { message: format!("Error opening logging config file {:?}", config_path), error: error }));
     }
+
+    Ok(())
 }

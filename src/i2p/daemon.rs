@@ -59,17 +59,12 @@ impl Daemon {
     pub fn run(&self) {}
 
     fn find_data_dir() -> Result<PathBuf, Error> {
-        println!("find_data_dir()");
         let mut data_dir = PathBuf::new();
         if cfg!(target_os = "macos") {
-            println!("Home directory = {:?}", env::home_dir());
             if let Some(home_dir) = env::home_dir() {
                 data_dir.push(home_dir);
-                println!("{:?}", data_dir);
             }
-            println!("{:?}", data_dir);
             data_dir.push("Library/Application Support/i2pd");
-            println!("{:?}", data_dir);
         } else if cfg!(target_os = "unix") {
             match env::home_dir() {
                 Some(home_dir) => data_dir.push(home_dir),
@@ -78,18 +73,15 @@ impl Daemon {
             data_dir.push("i2pd");
         }
 
-        println!("Returning data dir {:?}", data_dir);
         Ok(data_dir)
     }
 
     fn get_data_dir(config: &Config) -> Result<PathBuf, Error> {
         match config.get_value("datadir") {
             Some(dir) => {
-                println!("Got data dir {}", dir);
                 let mut datadir_path = PathBuf::new();
                 datadir_path.push(dir);
                 if !datadir_path.is_dir() {
-                    println!("Creating data dir {:?}", datadir_path);
                     fs::create_dir_all(datadir_path.as_path())?;
                 };
                 Ok(datadir_path)
@@ -102,10 +94,6 @@ impl Daemon {
         let config = Config::get_config()?;
         let data_dir = Self::get_data_dir(&config)?;
         let is_daemon = config.get_bool_value("daemon", false)?;
-        println!("is_daemon is {}", is_daemon);
-        println!("Configuring logging");
-        logging::configure(&config, &data_dir)?;
-        info!("Logging configured");
         info!("Creating Router Context");
         let router_context = RouterContext::new(&config)?;
         info!("Creating NetDB");
