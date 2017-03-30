@@ -86,6 +86,11 @@ impl Config {
                 .value_name("FILE")
                 .help("config file location")
                 .takes_value(true))
+            .arg(Arg::with_name("config-dir")
+                .long("config-dir")
+                .value_name("DIR")
+                .help("config directory location")
+                .takes_value(true))
             .arg(Arg::with_name("daemon")
                 .long("daemon")
                 .help("run in background"))
@@ -134,6 +139,7 @@ impl Config {
 
     pub fn get_as_path(&self, name: &str) -> Option<PathBuf> {
         let value = self.get_value(name);
+        println!("value = {:?}", value);
         match value {
             Some(val) => {
                 let mut buf = PathBuf::new();
@@ -177,7 +183,7 @@ impl<'a> Convert<ArgMatches<'a>> for Config {
                 .iter()
                 .map(|(k, v)| {
                     (k.to_string(),
-                     match v.vals.get(1) {
+                     match v.vals.get(0) {
                          Some(val) => val.to_str().unwrap().to_string(),
                          None => "true".to_string(),
                      })

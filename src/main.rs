@@ -26,22 +26,29 @@ extern crate yaml_rust;
 
 mod i2p;
 
-use i2p::fs::config_dir;
+use i2p::config::Config;
 use i2p::daemon::Daemon;
 use i2p::logging;
 use std::error::Error;
 
 fn main() {
-    let config_dir = match config_dir() {
-        Ok(config_dir) => config_dir,
-        Err(error) => panic!(error),
+    let config = Config::get_config().unwrap();
+
+    let config_dir = match config.get_as_path("config-dir") {
+        Some(dir) => {
+            if !dir.is_dir() {
+                panic!("Configuration directory {:?} not found", dir);
+            }
+            dir
+        },
+        None => panic!("No configuration directory defined"),
     };
 
-    if let Err(error) = logging::initialize(config_dir) {
+    if let Err(error) = logging::initialize(&config_dir) {
         panic!("Error initializing logging: {}", error);
     }
 
-    let daemon: Daemon = match Daemon::new() {
+    let daemon: Daemon = match Daemon::new(config) {
         Err(error) => panic!("Initialization error: {}: {} - {:?}", error, error.description(), error.cause()),
         Ok(daemon) => daemon,
     };

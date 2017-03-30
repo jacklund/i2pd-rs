@@ -90,8 +90,7 @@ impl Daemon {
         }
     }
 
-    pub fn new() -> Result<Daemon, Error> {
-        let config = Config::get_config()?;
+    pub fn new(config: Config) -> Result<Daemon, Error> {
         let data_dir = Self::get_data_dir(&config)?;
         let is_daemon = config.get_bool_value("daemon", false)?;
         info!("Creating Router Context");
