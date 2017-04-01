@@ -1,7 +1,8 @@
-use ini::ini;
 use log;
 use log4rs;
+use serde_yaml;
 use std::error;
+use std::error::Error as StdError;
 use std::fmt;
 use std::io;
 use std::num;
@@ -42,7 +43,10 @@ impl fmt::Display for ParseError {
 pub enum LogError {
     LogConfig(log4rs::config::Error),
     LogConfigErrors(log4rs::config::Errors),
-    LogError { message: String, error: log4rs::Error },
+    LogError {
+        message: String,
+        error: log4rs::Error,
+    },
     SetLogger(log::SetLoggerError),
 }
 
@@ -69,8 +73,12 @@ impl error::Error for LogError {
 impl fmt::Display for LogError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            LogError::LogConfig(ref error) => write!(f, "Error in logging configuration: {}", error),
-            LogError::LogError { message: ref message, error: ref error } => write!(f, "{}: {}", message, error),
+            LogError::LogConfig(ref error) => {
+                write!(f, "Error in logging configuration: {}", error)
+            }
+            LogError::LogError { message: ref message, error: ref error } => {
+                write!(f, "{}: {}", message, error)
+            }
             LogError::LogConfigErrors(ref errors) => write!(f, "Logging errors: {}", errors),
             LogError::SetLogger(ref error) => write!(f, "Error setting logger: {}", error),
         }
@@ -79,8 +87,11 @@ impl fmt::Display for LogError {
 
 #[derive(Debug)]
 pub enum Error {
-    ConfigFile(ini::Error),
-    IO(io::Error),
+    ConfigFile(serde_yaml::Error),
+    IO {
+        message: Option<String>,
+        error: io::Error,
+    },
     ParseConfig(ParseError),
     Configuration(String),
     Logging(LogError),
@@ -90,15 +101,18 @@ pub enum Error {
     Crypto(String),
 }
 
-impl From<ini::Error> for Error {
-    fn from(error: ini::Error) -> Error {
+impl From<serde_yaml::Error> for Error {
+    fn from(error: serde_yaml::Error) -> Error {
         Error::ConfigFile(error)
     }
 }
 
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Error {
-        Error::IO(error)
+        Error::IO {
+            message: None,
+            error: error,
+        }
     }
 }
 
@@ -155,7 +169,12 @@ impl fmt::Display for Error {
             Error::Transport(ref err) => write!(f, "Transport error: {}", err),
             Error::ConvertString(ref err) => write!(f, "String conversion error: {}", err),
             Error::Crypto(ref err) => write!(f, "Crypto error: {}", err),
-            Error::IO(ref err) => write!(f, "I/O error: {}", err),
+            Error::IO { message: ref message, error: ref error } => {
+                write!(f,
+                       "{}: {}",
+                       message.clone().unwrap_or(error.description().to_string()),
+                       error)
+            }
         }
     }
 }
@@ -171,7 +190,12 @@ impl error::Error for Error {
             Error::Transport(ref err) => err,
             Error::Crypto(ref err) => err,
             Error::ConvertString(ref err) => err.description(),
-            Error::IO(ref err) => err.description(),
+            Error::IO { message: ref message, error: ref error } => {
+                match *message {
+                    Some(ref msg) => msg.as_str(),
+                    None => error.description(),
+                }
+            }
         }
     }
 
@@ -185,7 +209,7 @@ impl error::Error for Error {
             Error::Crypto(_) |
             Error::Transport(_) => None,
             Error::ConvertString(ref err) => Some(err),
-            Error::IO(ref e) => Some(e),
+            Error::IO { message: ref message, error: ref error } => Some(error),
         }
     }
 }

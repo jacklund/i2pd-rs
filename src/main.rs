@@ -7,7 +7,6 @@ extern crate base64;
 extern crate byteorder;
 #[macro_use]
 extern crate clap;
-extern crate ini;
 #[macro_use]
 extern crate log;
 extern crate log4rs;
@@ -17,6 +16,7 @@ extern crate rand;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate serde_yaml;
 #[cfg(test)]
 extern crate tempdir;
 extern crate time;
@@ -30,9 +30,16 @@ use i2p::config::Config;
 use i2p::daemon::Daemon;
 use i2p::logging;
 use std::error::Error;
+use std::process::exit;
 
 fn main() {
-    let config = Config::get_config().unwrap();
+    let config = match Config::new() {
+        Ok(config) => config,
+        Err(error) => {
+            println!("{}", error);
+            exit(1);
+        }
+    };
 
     let config_dir = match config.get_as_path("config-dir") {
         Some(dir) => {
@@ -40,7 +47,7 @@ fn main() {
                 panic!("Configuration directory {:?} not found", dir);
             }
             dir
-        },
+        }
         None => panic!("No configuration directory defined"),
     };
 
@@ -49,7 +56,12 @@ fn main() {
     }
 
     let daemon: Daemon = match Daemon::new(config) {
-        Err(error) => panic!("Initialization error: {}: {} - {:?}", error, error.description(), error.cause()),
+        Err(error) => {
+            panic!("Initialization error: {}: {} - {:?}",
+                   error,
+                   error.description(),
+                   error.cause())
+        }
         Ok(daemon) => daemon,
     };
 
