@@ -28,8 +28,8 @@ extern crate yaml_rust;
 mod i2p;
 
 use i2p::config::Config;
-use i2p::daemon::Daemon;
 use i2p::logging;
+use i2p::router::Router;
 use std::error::Error;
 use std::process::exit;
 
@@ -51,21 +51,5 @@ fn main() {
         panic!("Error initializing logging: {}", error);
     }
 
-    let daemon: Daemon = match Daemon::new(config) {
-        Err(error) => {
-            panic!("Initialization error: {}: {} - {:?}",
-                   error,
-                   error.description(),
-                   error.cause())
-        }
-        Ok(daemon) => daemon,
-    };
-
-    match daemon.start() {
-        Ok(_) => daemon.run(),
-        Err(error) => {
-            daemon.stop();
-            error!("Error in daemon: {}", error);
-        }
-    }
+    let router = Router::new(&config);
 }
