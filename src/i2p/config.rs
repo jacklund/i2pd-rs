@@ -230,10 +230,10 @@ impl Config {
         }
     }
 
-    pub fn path_value(&self, path: &str, default: Option<PathBuf>) -> Option<PathBuf> {
+    pub fn path_value(&self, path: &str, default: Option<&PathBuf>) -> Option<PathBuf> {
         match self.string_value(path, None) {
             Some(path) => Some(PathBuf::from(path)),
-            None => default,
+            None => default.map(|p| PathBuf::from(p)),
         }
     }
 
