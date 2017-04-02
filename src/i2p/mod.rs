@@ -2,6 +2,7 @@ pub mod config;
 pub mod crypto;
 pub mod data;
 pub mod error;
+pub mod event_log;
 pub mod fs;
 pub mod http;
 pub mod logging;
