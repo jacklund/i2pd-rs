@@ -13,7 +13,6 @@ use std::path::PathBuf;
 pub struct Daemon {
     config: Config,
     data_dir: PathBuf,
-    is_daemon: bool,
     router_context: RouterContext,
     netdb: NetDB,
     transports: Transports,
@@ -28,8 +27,8 @@ impl Daemon {
             self.netdb.stop();
         }
 
-        let use_ntcp = self.config.get_bool_value("ntcp", true)?;
-        let use_ssu = self.config.get_bool_value("ssu", true)?;
+        let use_ntcp = self.config.bool_value("ntcp.enable", Some(true)).unwrap();
+        let use_ssu = self.config.bool_value("ssu.enable", Some(true)).unwrap();
 
         info!("Daemon: starting Transports");
         self.transports.start(use_ntcp, use_ssu)?;
@@ -77,22 +76,14 @@ impl Daemon {
     }
 
     fn get_data_dir(config: &Config) -> Result<PathBuf, Error> {
-        match config.get_value("datadir") {
-            Some(dir) => {
-                let mut datadir_path = PathBuf::new();
-                datadir_path.push(dir);
-                if !datadir_path.is_dir() {
-                    fs::create_dir_all(datadir_path.as_path())?;
-                };
-                Ok(datadir_path)
-            }
+        match config.path_value("datadir", None) {
+            Some(dir) => Ok(dir),
             None => Daemon::find_data_dir(),
         }
     }
 
     pub fn new(config: Config) -> Result<Daemon, Error> {
         let data_dir = Self::get_data_dir(&config)?;
-        let is_daemon = config.get_bool_value("daemon", false)?;
         info!("Creating Router Context");
         let router_context = RouterContext::new(&config)?;
         info!("Creating NetDB");
@@ -101,21 +92,20 @@ impl Daemon {
         let transports = Transports::new();
 
         info!("Creating HTTP");
-        let http = config.get_bool_value("http.enabled", true)?;
+        let http = config.bool_value("http.enabled", Some(true)).unwrap();
         let mut http_server = None;
         if http {
-            let http_address = config.get_value_with_default("http.address", "127.0.0.1");
-            let http_port = config.get_int_value("http.port", 7070)?;
+            let http_address = config.string_value("http.address", Some("127.0.0.1")).unwrap();
+            let http_port = config.i64_value("http.port", Some(7070)).unwrap();
             info!("Daemon starting HTTP server at {}:{}",
                   http_address,
                   http_port);
-            http_server = Some(HTTPServer::new(&http_address, http_port)?);
+            http_server = Some(HTTPServer::new(&http_address, http_port as u32)?);
         }
 
         Ok(Daemon {
             config: config,
             data_dir: data_dir,
-            is_daemon: is_daemon,
             router_context: router_context,
             netdb: netdb,
             transports: transports,

@@ -1,7 +1,8 @@
 use clap::{Arg, ArgMatches, App};
 use i2p::error::Error;
+use linked_hash_map::LinkedHashMap;
 use serde::Deserialize;
-use serde_yaml;
+use serde_yaml::{self, Mapping};
 use std::collections::HashMap;
 use std::convert::From;
 use std::env;
@@ -119,7 +120,16 @@ fn get_working_dir(command_line: &ArgMatches) -> Result<PathBuf, Error> {
 
 fn parse_config_file(config_file: ConfigFile) -> Result<Config, Error> {
     match serde_yaml::from_reader(&config_file.file) {
-        Ok(config) => Ok(config),
+        Ok(config) => {
+            match config {
+                serde_yaml::Value::Mapping(mapping) => Ok(Config { values: mapping }),
+                _ => {
+                    Err(Error::Configuration(format!("Unable to read configuration file {:?} as \
+                                                      map",
+                                                     config_file.path)))
+                }
+            }
+        }
         Err(error) => {
             Err(Error::Configuration(format!("Error reading configuration file {:?}: {}",
                                              config_file.path,
@@ -128,20 +138,17 @@ fn parse_config_file(config_file: ConfigFile) -> Result<Config, Error> {
     }
 }
 
-fn merge_configs(args: ArgMatches,
-                 config_file: Config,
-                 config_dir: PathBuf,
-                 working_dir: PathBuf)
-                 -> Config {
-    Config::convert(args).map.iter().fold(config_file, |mut config, (key, value)| {
-        config.insert(key, value);
-        config
-    })
+fn merge_configs(args: ArgMatches, mut config: Config) -> Config {
+    if args.is_present("config-dir") {
+        config.insert_string("i2p.dir.config", args.value_of("config-dir").unwrap());
+    }
+
+    config
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug)]
 pub struct Config {
-    map: HashMap<String, String>,
+    values: Mapping,
 }
 
 impl Config {
@@ -150,11 +157,6 @@ impl Config {
             .about("I2P Daemon")
             .author(crate_authors!())
             .version(crate_version!())
-            .arg(Arg::with_name("datadir")
-                .long("datadir")
-                .value_name("DIR")
-                .help("data directory location")
-                .takes_value(true))
             .arg(Arg::with_name("config")
                 .short("C")
                 .long("config")
@@ -171,80 +173,83 @@ impl Config {
                 .value_name("DIR")
                 .help("working directory location")
                 .takes_value(true))
-            .arg(Arg::with_name("daemon")
-                .long("daemon")
-                .help("run in background"))
             .get_matches();
 
         let config_dir = get_config_dir(&cmd_line)?;
         let config_file = get_config_file(&cmd_line, &config_dir)?;
         let working_dir = get_working_dir(&cmd_line)?;
-        Ok(merge_configs(cmd_line,
-                         parse_config_file(config_file)?,
-                         config_dir,
-                         working_dir))
+        Ok(merge_configs(cmd_line, parse_config_file(config_file)?))
     }
 
-    fn insert(&mut self, key: &str, value: &str) {
-        self.map.insert(key.to_string(), value.to_string());
-    }
-
-    pub fn get_bool_value(&self, name: &str, default: bool) -> Result<bool, Error> {
-        match self.get_value(name) {
-            Some(value) => Ok(bool::from_str(value)?),
-            None => Ok(default),
+    fn find(&self, path: &str) -> Option<&serde_yaml::Value> {
+        let mut current = &self.values;
+        let mut path_elements: Vec<&str> = path.split('.').collect::<Vec<&str>>();
+        path_elements.reverse();
+        while !path_elements.is_empty() {
+            let element = path_elements.pop().unwrap();
+            let temp = match current.get(&serde_yaml::Value::String(element.to_string())) {
+                None => return None,
+                Some(node) => {
+                    if path_elements.is_empty() {
+                        return Some(node);
+                    } else {
+                        match *node {
+                            serde_yaml::Value::Mapping(ref mapping) => mapping,
+                            _ => return None,
+                        }
+                    }
+                }
+            };
+            current = temp;
         }
+
+        None
     }
 
-    pub fn get_int_value(&self, name: &str, default: u32) -> Result<u32, Error> {
-        match self.get_value(name) {
-            Some(value) => Ok(value.parse::<u32>()?),
-            None => Ok(default),
-        }
-    }
-
-    pub fn get_value(&self, name: &str) -> Option<&String> {
-        self.map.get(name)
-    }
-
-    pub fn get_value_with_default(&self, name: &str, default: &str) -> String {
-        match self.get_value(name) {
-            Some(value) => value.to_string(),
-            None => default.to_string(),
-        }
-    }
-
-    pub fn get_as_path(&self, name: &str) -> Option<PathBuf> {
-        let value = self.get_value(name);
-        println!("value = {:?}", value);
-        match value {
-            Some(val) => {
-                let mut buf = PathBuf::new();
-                buf.push(val.to_string());
-                Some(buf)
+    pub fn bool_value(&self, path: &str, default: Option<bool>) -> Option<bool> {
+        match self.find(path) {
+            Some(value) => {
+                match *value {
+                    serde_yaml::Value::Bool(b) => Some(b),
+                    _ => None,
+                }
             }
+            None => default,
+        }
+    }
+
+    pub fn string_value(&self, path: &str, default: Option<&str>) -> Option<String> {
+        match self.find(path) {
+            Some(value) => {
+                match *value {
+                    serde_yaml::Value::String(ref string) => Some(string.clone()),
+                    _ => None,
+                }
+            }
+            None => default.map(|d| d.to_string()),
+        }
+    }
+
+    pub fn path_value(&self, path: &str, default: Option<&str>) -> Option<PathBuf> {
+        match self.string_value(path, default) {
+            Some(path) => Some(PathBuf::from(path)),
             None => None,
         }
     }
-}
 
-trait Convert<T> {
-    fn convert(T) -> Self;
-}
-
-impl<'a> Convert<ArgMatches<'a>> for Config {
-    fn convert(matches: ArgMatches) -> Config {
-        Config {
-            map: matches.args
-                .iter()
-                .map(|(k, v)| {
-                    (k.to_string(),
-                     match v.vals.get(0) {
-                         Some(val) => val.to_str().unwrap().to_string(),
-                         None => "true".to_string(),
-                     })
-                })
-                .collect(),
+    pub fn i64_value(&self, path: &str, default: Option<i64>) -> Option<i64> {
+        match self.find(path) {
+            Some(value) => {
+                match *value {
+                    serde_yaml::Value::I64(i) => Some(i),
+                    _ => None,
+                }
+            }
+            None => default,
         }
+    }
+
+    fn insert_string(&mut self, path: &str, value: &str) {
+        unimplemented!()
     }
 }

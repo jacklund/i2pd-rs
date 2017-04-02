@@ -1,0 +1,37 @@
+i2np:
+  bandwidth:
+    inboundBurstKBytes: 22520
+    inboundBurstKBytesPerSecond: 128
+    inboundKBytesPerSecond: 128
+    outboundBurstKBytes: 22520
+    outboundBurstKBytesPerSecond: 128
+    outboundKBytesPerSecond: 128
+  laptopMode: false
+  ntcp:
+    autoip: true
+    enable: true
+  udp:
+    addressSources: local,upnp,ssu
+  upnp:
+  enable: true
+i2p:
+  dir:
+    config: .
+prng:
+  buffers: 16
+router:
+  dynamicKeys: false
+  maxParticipatingTunnels: 150
+  newsRefreshFrequency: 86400000
+  sharePercentage: 80
+  updatePolicy: notify
+  updateProxyHost: 127.0.0.1
+  updateProxyPort: 4444
+  updateThroughProxy: true
+  updateURL: http://echelon.i2p/i2p/i2pupdate.sud,http://stats.i2p/i2p/i2pupdate.sud,http://www.i2p2.i2p/_static/i2pupdate.sud,http://update.postman.i2p/i2pupdate.sud
+  updateUnsigned: false
+routerconsole:
+  lan: true
+  summaryRefresh: 30
+time:
+  disabled: false

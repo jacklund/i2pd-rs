@@ -7,6 +7,7 @@ extern crate base64;
 extern crate byteorder;
 #[macro_use]
 extern crate clap;
+extern crate linked_hash_map;
 #[macro_use]
 extern crate log;
 extern crate log4rs;
@@ -33,7 +34,7 @@ use std::error::Error;
 use std::process::exit;
 
 fn main() {
-    let config = match Config::new() {
+    let config: Config = match Config::new() {
         Ok(config) => config,
         Err(error) => {
             println!("{}", error);
@@ -41,14 +42,9 @@ fn main() {
         }
     };
 
-    let config_dir = match config.get_as_path("config-dir") {
-        Some(dir) => {
-            if !dir.is_dir() {
-                panic!("Configuration directory {:?} not found", dir);
-            }
-            dir
-        }
-        None => panic!("No configuration directory defined"),
+    let config_dir = match config.path_value("i2p.dir.config", None) {
+        Some(dir) => dir,
+        None => panic!("No config dir configured"),
     };
 
     if let Err(error) = logging::initialize(&config_dir) {

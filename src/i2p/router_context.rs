@@ -37,21 +37,22 @@ impl RouterContext {
     }
 
     fn initialize(&mut self, config: &Config) -> Result<(), Error> {
-        self.net_id = config.get_value_with_default("netid", I2PD_NET_ID);
+        self.net_id = config.string_value("netid", Some(I2PD_NET_ID)).unwrap();
         if self.net_id != I2PD_NET_ID {
             crypto::init_gost();  // Init GOST for our own darknet
         }
 
-        self.configure_ipv4(config.get_bool_value("ipv4", true)?);
-        self.configure_ipv6(config.get_bool_value("ipv6", true)?);
+        self.configure_ipv4(config.bool_value("ipv4", Some(true)).unwrap());
+        self.configure_ipv6(config.bool_value("ipv6", Some(true)).unwrap());
 
-        self.update_port(config.get_int_value("port", 0)?);
+        self.update_port(config.i64_value("port", Some(0)).unwrap() as u32);
 
-        self.accepts_tunnels = !config.get_bool_value("notransit", false)?;
-        self.set_max_num_transit_tunnels(config.get_int_value("limits.transittunnels", 2500)?)?;
-        self.set_flood_fill(config.get_bool_value("floodfill", false)?)?;
-        self.set_bandwidth(config.get_value("bandwidth").map(|s| s.as_str()))?;
-        self.set_family(config.get_value("family").map(|s| s.as_str()))?;
+        self.accepts_tunnels = !config.bool_value("notransit", Some(false)).unwrap();
+        self.set_max_num_transit_tunnels(config.i64_value("limits.transittunnels", Some(2500))
+                .unwrap() as u32)?;
+        self.set_flood_fill(config.bool_value("floodfill", Some(false)).unwrap())?;
+        self.set_bandwidth(config.string_value("bandwidth", None).as_ref().map(|s| &**s))?;
+        self.set_family(config.string_value("family", None).as_ref().map(|s| &**s))?;
 
         Ok(())
     }
