@@ -4,11 +4,11 @@ use std::env;
 use std::path::PathBuf;
 
 pub struct RouterContext {
-    config_dir: PathBuf,
-    router_dir: PathBuf,
-    pid_dir: PathBuf,
-    log_dir: PathBuf,
-    app_dir: PathBuf,
+    pub config_dir: PathBuf,
+    pub router_dir: PathBuf,
+    pub pid_dir: PathBuf,
+    pub log_dir: PathBuf,
+    pub app_dir: PathBuf,
 }
 
 fn make_dir(dir: &PathBuf) {
@@ -19,7 +19,10 @@ impl RouterContext {
     pub fn new(config: &Config) -> Result<RouterContext, Error> {
         let cwd = match env::current_dir() {
             Ok(dir) => dir,
-            Err(error) => return Err(Error::Configuration(format!("Error finding current directory: {}", error))),
+            Err(error) => {
+                return Err(Error::Configuration(format!("Error finding current directory: {}",
+                                                        error)))
+            }
         };
         let config_dir = config.path_value("i2p.dir.config", Some(&cwd)).unwrap();
         make_dir(&config_dir);

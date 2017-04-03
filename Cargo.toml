@@ -6,10 +6,10 @@ authors = ["Jack Lund <jackl@geekheads.net>"]
 [dependencies]
 byteorder = "1.0.0"
 clap = "2.20.5"
+libc = "0.2.21"
 linked-hash-map = "0.4.2"
 log = "0.3.6"
 log4rs = "0.6.2"
-mockers_macros = "0.5.7"
 rand = "0.3.15"
 serde = "0.9.11"
 serde_derive = "0.9.11"

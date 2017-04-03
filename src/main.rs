@@ -1,12 +1,12 @@
 #![feature(box_syntax)]
 #![feature(plugin, custom_derive)]
-#![plugin(mockers_macros)]
 
 #[cfg(test)]
 extern crate base64;
 extern crate byteorder;
 #[macro_use]
 extern crate clap;
+extern crate libc;
 extern crate linked_hash_map;
 #[macro_use]
 extern crate log;

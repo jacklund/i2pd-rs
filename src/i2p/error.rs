@@ -12,6 +12,7 @@ use std::str;
 pub enum ParseError {
     Bool(str::ParseBoolError),
     Int(num::ParseIntError),
+    Float(num::ParseFloatError),
 }
 
 impl error::Error for ParseError {
@@ -19,6 +20,7 @@ impl error::Error for ParseError {
         match *self {
             ParseError::Bool(ref error) => error.description(),
             ParseError::Int(ref error) => error.description(),
+            ParseError::Float(ref error) => error.description(),
         }
     }
 
@@ -26,6 +28,7 @@ impl error::Error for ParseError {
         match *self {
             ParseError::Bool(ref error) => Some(error),
             ParseError::Int(ref error) => Some(error),
+            ParseError::Float(ref error) => Some(error),
         }
     }
 }
@@ -35,6 +38,7 @@ impl fmt::Display for ParseError {
         match *self {
             ParseError::Bool(ref error) => write!(f, "Error parsing boolean value: {}", error),
             ParseError::Int(ref error) => write!(f, "Error parsing integer value: {}", error),
+            ParseError::Float(ref error) => write!(f, "Error parsing float value: {}", error),
         }
     }
 }
@@ -92,7 +96,7 @@ pub enum Error {
         message: Option<String>,
         error: io::Error,
     },
-    ParseConfig(ParseError),
+    ParseError { value: String, error: ParseError },
     Configuration(String),
     Logging(LogError),
     Serialization(String),
@@ -116,23 +120,11 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<str::ParseBoolError> for Error {
-    fn from(error: str::ParseBoolError) -> Error {
-        Error::ParseConfig(ParseError::Bool(error))
-    }
-}
-
 impl From<log::SetLoggerError> for Error {
     fn from(error: log::SetLoggerError) -> Error {
         Error::Logging(LogError::SetLogger(error))
     }
 }
-
-// impl From<log4rs::Error> for Error {
-//     fn from(error: log4rs::Error) -> Error {
-//         Error::Logging(LogError::LogError(error))
-//     }
-// }
 
 impl From<log4rs::config::Error> for Error {
     fn from(error: log4rs::config::Error) -> Error {
@@ -146,12 +138,6 @@ impl From<log4rs::config::Errors> for Error {
     }
 }
 
-impl From<num::ParseIntError> for Error {
-    fn from(error: num::ParseIntError) -> Error {
-        Error::ParseConfig(ParseError::Int(error))
-    }
-}
-
 impl From<str::Utf8Error> for Error {
     fn from(error: str::Utf8Error) -> Error {
         Error::ConvertString(error)
@@ -162,7 +148,9 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::ConfigFile(ref err) => write!(f, "Error reading configuration file: {}", err),
-            Error::ParseConfig(ref err) => write!(f, "Error parsing configuration: {}", err),
+            Error::ParseError { value: ref value, error: ref error } => {
+                write!(f, "Error parsing value {}: {}", value, error)
+            }
             Error::Configuration(ref err) => write!(f, "Configuration error: {}", err),
             Error::Logging(ref err) => write!(f, "Logging error: {}", err),
             Error::Serialization(ref err) => write!(f, "Serialization error: {}", err),
@@ -183,7 +171,7 @@ impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
             Error::ConfigFile(ref err) => err.description(),
-            Error::ParseConfig(ref err) => err.description(),
+            Error::ParseError { value: _, error: ref error } => error.description(),
             Error::Logging(ref err) => err.description(),
             Error::Configuration(ref err) => err.as_str(),
             Error::Serialization(ref err) => err,
@@ -202,7 +190,7 @@ impl error::Error for Error {
     fn cause(&self) -> Option<&error::Error> {
         match *self {
             Error::ConfigFile(ref e) => Some(e),
-            Error::ParseConfig(ref e) => Some(e),
+            Error::ParseError { value: _, error: ref error } => Some(error),
             Error::Logging(ref e) => Some(e),
             Error::Configuration(_) |
             Error::Serialization(_) |
