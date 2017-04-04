@@ -3,6 +3,7 @@ use i2p::error::Error;
 use std::env;
 use std::path::PathBuf;
 
+#[derive(Debug)]
 pub struct RouterContext {
     pub config_dir: PathBuf,
     pub router_dir: PathBuf,
@@ -24,6 +25,9 @@ impl RouterContext {
                                                         error)))
             }
         };
+
+        info!("RouterContext: initializing configuration paths");
+
         let config_dir = config.path_value("i2p.dir.config", Some(&cwd)).unwrap();
         make_dir(&config_dir);
 

@@ -50,6 +50,6 @@ fn main() {
     if let Err(error) = logging::initialize(&config_dir) {
         panic!("Error initializing logging: {}", error);
     }
-
-    let router = Router::new(&config);
+    
+    info!("{:?}", Router::new(&config));
 }

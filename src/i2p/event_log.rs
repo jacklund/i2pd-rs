@@ -1,5 +1,6 @@
 use i2p::config::Config;
 
+#[derive(Debug)]
 pub struct EventLog {
 }
 
