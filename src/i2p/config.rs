@@ -118,11 +118,11 @@ fn get_working_dir(command_line: &ArgMatches) -> Result<PathBuf, Error> {
     }
 }
 
-fn parse_config_file(config_file: ConfigFile) -> Result<Config, Error> {
+fn parse_config_file(config_file: ConfigFile) -> Result<Mapping, Error> {
     match serde_yaml::from_reader(&config_file.file) {
         Ok(config) => {
             match config {
-                serde_yaml::Value::Mapping(mapping) => Ok(Config { values: mapping }),
+                serde_yaml::Value::Mapping(mapping) => Ok(mapping),
                 _ => {
                     Err(Error::Configuration(format!("Unable to read configuration file {:?} as \
                                                       map",
@@ -138,17 +138,55 @@ fn parse_config_file(config_file: ConfigFile) -> Result<Config, Error> {
     }
 }
 
-fn merge_configs(args: ArgMatches, mut config: Config) -> Config {
-    if args.is_present("config-dir") {
-        config.insert_string("i2p.dir.config", args.value_of("config-dir").unwrap());
+fn merge_configs(args: ArgMatches, config_from_file: serde_yaml::Mapping) -> Result<Values, Error> {
+    let mut values = Values::new();
+    for (k, v) in config_from_file {
+        match k {
+            serde_yaml::Value::String(key) => {
+                match v {
+                    serde_yaml::Value::Bool(value) => {
+                        values.insert(key, Value::Bool(value));
+                    }
+                    serde_yaml::Value::F64(value) => {
+                        values.insert(key, Value::F64(value));
+                    }
+                    serde_yaml::Value::I64(value) => {
+                        values.insert(key, Value::I64(value));
+                    }
+                    serde_yaml::Value::String(value) => {
+                        values.insert(key, Value::String(value));
+                    }
+                    _ => {
+                        return Err(Error::Configuration(format!("Bad yaml value found for key {}",
+                                                                key)))
+                    }
+                }
+            }
+            _ => return Err(Error::Configuration(format!("Bad key found in config file: {:?}", k))),
+        }
     }
 
-    config
+    if args.is_present("config-dir") {
+        values.insert("i2p.dir.config".to_string(),
+                      Value::String(args.value_of("config-dir").unwrap().to_string()));
+    }
+
+    Ok(values)
 }
 
 #[derive(Debug)]
+pub enum Value {
+    Bool(bool),
+    I64(i64),
+    F64(f64),
+    String(String),
+}
+
+type Values = HashMap<String, Value>;
+
+#[derive(Debug)]
 pub struct Config {
-    values: Mapping,
+    values: Values,
 }
 
 impl Config {
@@ -178,78 +216,41 @@ impl Config {
         let config_dir = get_config_dir(&cmd_line)?;
         let config_file = get_config_file(&cmd_line, &config_dir)?;
         let working_dir = get_working_dir(&cmd_line)?;
-        Ok(merge_configs(cmd_line, parse_config_file(config_file)?))
+        Ok(Config { values: merge_configs(cmd_line, parse_config_file(config_file)?)? })
     }
 
-    fn find(&self, path: &str) -> Option<&serde_yaml::Value> {
-        let mut current = &self.values;
-        let mut path_elements: Vec<&str> = path.split('.').collect::<Vec<&str>>();
-        path_elements.reverse();
-        while !path_elements.is_empty() {
-            let element = path_elements.pop().unwrap();
-            let temp = match current.get(&serde_yaml::Value::String(element.to_string())) {
-                None => return None,
-                Some(node) => {
-                    if path_elements.is_empty() {
-                        return Some(node);
-                    } else {
-                        match *node {
-                            serde_yaml::Value::Mapping(ref mapping) => mapping,
-                            _ => return None,
-                        }
-                    }
-                }
-            };
-            current = temp;
-        }
-
-        None
-    }
-
-    pub fn bool_value(&self, path: &str, default: Option<bool>) -> Option<bool> {
-        match self.find(path) {
-            Some(value) => {
-                match *value {
-                    serde_yaml::Value::Bool(b) => Some(b),
-                    _ => None,
-                }
-            }
-            None => default,
+    pub fn bool_value(&self, key: &str, default: Option<bool>) -> Option<bool> {
+        match self.values.get(key) {
+            Some(&Value::Bool(value)) => Some(value),
+            _ => default,
         }
     }
 
-    pub fn string_value(&self, path: &str, default: Option<&str>) -> Option<String> {
-        match self.find(path) {
-            Some(value) => {
-                match *value {
-                    serde_yaml::Value::String(ref string) => Some(string.clone()),
-                    _ => None,
-                }
-            }
-            None => default.map(|d| d.to_string()),
+    pub fn string_value(&self, key: &str, default: Option<&str>) -> Option<String> {
+        match self.values.get(key) {
+            Some(&Value::String(ref value)) => Some(value.to_string()),
+            _ => default.map(|s| s.to_string()),
         }
     }
 
-    pub fn path_value(&self, path: &str, default: Option<&PathBuf>) -> Option<PathBuf> {
-        match self.string_value(path, None) {
+    pub fn path_value(&self, key: &str, default: Option<&PathBuf>) -> Option<PathBuf> {
+        match self.string_value(key, None) {
             Some(path) => Some(PathBuf::from(path)),
             None => default.map(|p| PathBuf::from(p)),
         }
     }
 
-    pub fn i64_value(&self, path: &str, default: Option<i64>) -> Option<i64> {
-        match self.find(path) {
-            Some(value) => {
-                match *value {
-                    serde_yaml::Value::I64(i) => Some(i),
-                    _ => None,
-                }
-            }
-            None => default,
+    pub fn i64_value(&self, key: &str, default: Option<i64>) -> Option<i64> {
+        match self.values.get(key) {
+            Some(&Value::I64(value)) => Some(value),
+            _ => default,
         }
     }
 
-    fn insert_string(&mut self, path: &str, value: &str) {
-        unimplemented!()
+    pub fn f64_value(&self, key: &str, default: Option<f64>) -> Option<f64> {
+        match self.values.get(key) {
+            Some(&Value::F64(value)) => Some(value),
+            _ => default,
+        }
     }
 }
