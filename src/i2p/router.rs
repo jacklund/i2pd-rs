@@ -1,4 +1,6 @@
+use gcrypt;
 use i2p::config::Config;
+use i2p::data::router_info::RouterInfo;
 use i2p::error::{Error, ParseError};
 use i2p::event_log::EventLog;
 use i2p::router_context::RouterContext;
@@ -8,10 +10,54 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::exit;
 
+const DEFAULT_NETWORK_ID: u32 = 2;
+const NETWORK_ID_CONFIG: &str = "router.networkID";
+
 #[derive(Debug)]
 pub struct Router {
     router_context: RouterContext,
     event_log: EventLog,
+    network_id: u32,
+    state: RouterState,
+    config: Config,
+    token: gcrypt::Token,
+    router_info: Option<RouterInfo>,
+}
+
+#[derive(Debug)]
+enum RouterState {
+    /** constructor complete */
+    INITIALIZED,
+    /** runRouter() called */
+    STARTING_1,
+    /** startupStuff() complete, most of the time here is NTP */
+    STARTING_2,
+    /** NTP done, Job queue started, StartupJob queued, runRouter() returned */
+    STARTING_3,
+    /** RIs loaded. From STARTING_3 */
+    NETDB_READY,
+    /** Non-zero-hop expl. tunnels built. From STARTING_3 */
+    EXPL_TUNNELS_READY,
+    /** from NETDB_READY or EXPL_TUNNELS_READY */
+    RUNNING,
+    /**
+        *  A "soft" restart, primarily of the comm system, after
+        *  a port change or large step-change in system time.
+        *  Does not stop the whole JVM, so it is safe even in the absence
+        *  of the wrapper.
+        *  This is not a graceful restart - all peer connections are dropped immediately.
+        */
+    RESTARTING,
+    /** cancellable shutdown has begun */
+    GRACEFUL_SHUTDOWN,
+    /** In shutdown(). Non-cancellable shutdown has begun */
+    FINAL_SHUTDOWN_1,
+    /** In shutdown2(). Killing everything */
+    FINAL_SHUTDOWN_2,
+    /** In finalShutdown(). Final cleanup */
+    FINAL_SHUTDOWN_3,
+    /** all done */
+    STOPPED
 }
 
 fn is_another_router_running(pid_dir: &PathBuf) -> Result<bool, Error> {
@@ -98,9 +144,15 @@ fn get_process_id() -> u32 {
     }
 }
 
+fn init_gcrypt() -> gcrypt::Token {
+    gcrypt::init(|mut x| {
+        x.disable_secmem().enable_quick_random();
+    })
+}
+
 impl Router {
-    pub fn new(config: &Config) -> Result<Router, Error> {
-        let context = RouterContext::new(config)?;
+    pub fn new(config: Config) -> Result<Router, Error> {
+        let context = RouterContext::new(&config)?;
 
         info!("Checking to see if another router is running");
         if is_another_router_running(&context.pid_dir)? {
@@ -110,9 +162,21 @@ impl Router {
 
         write_pid_file(&context.pid_dir);
 
+        let network_id = config.i64_value(NETWORK_ID_CONFIG, Some(DEFAULT_NETWORK_ID as i64)).unwrap() as u32;
+
         Ok(Router {
             router_context: context,
-            event_log: EventLog::new(config),
+            event_log: EventLog::new(&config),
+            network_id: network_id,
+            state: RouterState::INITIALIZED,
+            config: config,
+            token: init_gcrypt(),
+            router_info: None,
         })
+    }
+
+    pub fn run(&mut self) {
+        self.state = RouterState::STARTING_1;
+        self.event_log.add_event("started", None);
     }
 }

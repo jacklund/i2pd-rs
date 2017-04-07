@@ -6,6 +6,7 @@ authors = ["Jack Lund <jackl@geekheads.net>"]
 [dependencies]
 byteorder = "1.0.0"
 clap = "2.20.5"
+gcrypt = "0.5.2"
 libc = "0.2.21"
 linked-hash-map = "0.4.2"
 log = "0.3.6"

@@ -184,6 +184,7 @@ pub enum SigningPrivateKey {
     EdDSA_SHA512_Ed25519ph(Box<[u8]>), // length = 32
 }
 
+#[derive(Debug)]
 pub enum Signature {
     DSA_SHA1(Box<[u8]>), // length = 40
     ECDSA_SHA256_P256(Box<[u8]>), // length = 64

@@ -6,6 +6,7 @@ extern crate base64;
 extern crate byteorder;
 #[macro_use]
 extern crate clap;
+extern crate gcrypt;
 extern crate libc;
 extern crate linked_hash_map;
 #[macro_use]
@@ -51,5 +52,5 @@ fn main() {
         panic!("Error initializing logging: {}", error);
     }
     
-    info!("{:?}", Router::new(&config));
+    info!("{:?}", Router::new(config));
 }
